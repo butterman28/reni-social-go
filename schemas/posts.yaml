@@ -1,0 +1,52 @@
+table: posts
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  workspace_id:
+    type: uuid
+    not_null: true
+  author_id:
+    type: uuid
+    not_null: true
+  content:
+    type: text
+    not_null: true
+  media_urls:
+    type: jsonb
+    not_null: false
+    default: "'[]'::jsonb"
+  platforms:
+    type: jsonb
+    not_null: true
+    default: "'[]'::jsonb"
+  status:
+    type: varchar(50)
+    not_null: true
+    default: "'draft'"
+  scheduled_at:
+    type: timestamptz
+    not_null: false
+  published_at:
+    type: timestamptz
+    not_null: false
+  fail_reason:
+    type: text
+    not_null: false
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+  updated_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_posts_workspace_id
+    columns: [workspace_id]
+  - name: idx_posts_author_id
+    columns: [author_id]
+  - name: idx_posts_status_scheduled
+    columns: [status, scheduled_at]

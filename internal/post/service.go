@@ -1,0 +1,370 @@
+package post
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+
+	"reni-social/internal/domain"
+	"reni-social/internal/platform"
+	"reni-social/internal/platform/linkedin"
+	"reni-social/internal/platform/meta"
+	xplatform "reni-social/internal/platform/x"
+	"reni-social/pkg/db"
+)
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Request / Response types
+// ──────────────────────────────────────────────────────────────────────────────
+
+type CreatePostRequest struct {
+	WorkspaceID string            `json:"workspace_id"`
+	Content     string            `json:"content"`
+	MediaURLs   []string          `json:"media_urls"`
+	Platforms   []domain.Platform `json:"platforms"`
+	ScheduledAt *time.Time        `json:"scheduled_at"` // nil = draft
+}
+
+type UpdatePostRequest struct {
+	Content     *string           `json:"content"`
+	MediaURLs   []string          `json:"media_urls"`
+	Platforms   []domain.Platform `json:"platforms"`
+	ScheduledAt *time.Time        `json:"scheduled_at"`
+}
+
+type PostFilter struct {
+	Status string
+	Page   int
+	Limit  int
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Service
+// ──────────────────────────────────────────────────────────────────────────────
+
+// CreatePost persists a new post. If ScheduledAt is set, the status is "scheduled";
+// otherwise it is saved as "draft".
+func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*domain.Post, error) {
+	workspaceID, err := uuid.Parse(req.WorkspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid workspace_id: %w", err)
+	}
+	authorUUID, err := uuid.Parse(authorID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid author id: %w", err)
+	}
+	if req.Content == "" {
+		return nil, fmt.Errorf("content cannot be empty")
+	}
+	if len(req.Platforms) == 0 {
+		return nil, fmt.Errorf("at least one platform is required")
+	}
+
+	status := domain.StatusDraft
+	if req.ScheduledAt != nil {
+		if req.ScheduledAt.Before(time.Now()) {
+			return nil, fmt.Errorf("scheduled_at must be in the future")
+		}
+		status = domain.StatusScheduled
+	}
+
+	mediaJSON, _ := json.Marshal(req.MediaURLs)
+	platformJSON, _ := json.Marshal(req.Platforms)
+	postID := uuid.New()
+	now := time.Now()
+
+	query := `
+		INSERT INTO posts (id, workspace_id, author_id, content, media_urls, platforms, status, scheduled_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $9)
+	`
+	_, err = db.DB.ExecContext(ctx, query,
+		postID, workspaceID, authorUUID, req.Content,
+		mediaJSON, platformJSON, string(status), req.ScheduledAt, now,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create post: %w", err)
+	}
+
+	return &domain.Post{
+		ID:          postID,
+		WorkspaceID: workspaceID,
+		AuthorID:    authorUUID,
+		Content:     req.Content,
+		MediaURLs:   req.MediaURLs,
+		Platforms:   req.Platforms,
+		Status:      status,
+		ScheduledAt: req.ScheduledAt,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}, nil
+}
+
+// GetPost fetches a single post scoped to a workspace.
+func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, error) {
+	query := `
+		SELECT id, workspace_id, author_id, content, media_urls, platforms,
+		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
+		FROM posts
+		WHERE id = $1 AND workspace_id = $2
+	`
+	row := db.DB.QueryRowContext(ctx, query, postID, workspaceID)
+	return scanPost(row)
+}
+
+// ListPosts returns paginated posts for a workspace, optionally filtered by status.
+func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.Post, error) {
+	if f.Limit == 0 {
+		f.Limit = 20
+	}
+	offset := (f.Page) * f.Limit
+
+	args := []any{workspaceID, f.Limit, offset}
+	where := "WHERE workspace_id = $1"
+	if f.Status != "" {
+		where += " AND status = $4"
+		args = append(args, f.Status)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, workspace_id, author_id, content, media_urls, platforms,
+		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
+		FROM posts %s
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`, where)
+
+	rows, err := db.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list posts: %w", err)
+	}
+	defer rows.Close()
+
+	var posts []domain.Post
+	for rows.Next() {
+		p, err := scanPostRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, *p)
+	}
+	return posts, rows.Err()
+}
+
+// UpdatePost modifies a post's content, media, platforms, or schedule.
+// Only draft and scheduled posts can be updated.
+func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostRequest) (*domain.Post, error) {
+	existing, err := GetPost(ctx, postID, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
+		return nil, fmt.Errorf("cannot edit a post that has already been published")
+	}
+
+	if req.Content != nil {
+		existing.Content = *req.Content
+	}
+	if req.MediaURLs != nil {
+		existing.MediaURLs = req.MediaURLs
+	}
+	if req.Platforms != nil {
+		existing.Platforms = req.Platforms
+	}
+	if req.ScheduledAt != nil {
+		existing.ScheduledAt = req.ScheduledAt
+		existing.Status = domain.StatusScheduled
+	}
+
+	mediaJSON, _ := json.Marshal(existing.MediaURLs)
+	platformJSON, _ := json.Marshal(existing.Platforms)
+
+	_, err = db.DB.ExecContext(ctx, `
+		UPDATE posts SET content=$1, media_urls=$2::jsonb, platforms=$3::jsonb,
+		                 status=$4, scheduled_at=$5, updated_at=NOW()
+		WHERE id=$6 AND workspace_id=$7
+	`, existing.Content, mediaJSON, platformJSON, string(existing.Status),
+		existing.ScheduledAt, postID, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("update post: %w", err)
+	}
+	return existing, nil
+}
+
+// DeletePost removes a post from the DB. Only draft/failed/scheduled posts can be deleted.
+func DeletePost(ctx context.Context, postID, workspaceID string) error {
+	result, err := db.DB.ExecContext(ctx,
+		`DELETE FROM posts WHERE id=$1 AND workspace_id=$2 AND status NOT IN ('publishing','published')`,
+		postID, workspaceID)
+	if err != nil {
+		return fmt.Errorf("delete post: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("post not found or cannot be deleted in its current state")
+	}
+	return nil
+}
+
+// SchedulePost sets or updates the scheduled time for an existing post.
+func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time) error {
+	if scheduledAt.Before(time.Now()) {
+		return fmt.Errorf("scheduled_at must be in the future")
+	}
+	_, err := db.DB.ExecContext(ctx, `
+		UPDATE posts SET status='scheduled', scheduled_at=$1, updated_at=NOW()
+		WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled')
+	`, scheduledAt, postID, workspaceID)
+	return err
+}
+
+// PublishNow immediately dispatches a post to all its platforms.
+// This is called directly from the HTTP handler, bypassing the scheduler queue.
+func PublishNow(ctx context.Context, postID, workspaceID string) error {
+	post, err := GetPost(ctx, postID, workspaceID)
+	if err != nil {
+		return err
+	}
+	if post.Status == domain.StatusPublished || post.Status == domain.StatusPublishing {
+		return fmt.Errorf("post is already published or being published")
+	}
+
+	// Mark as publishing
+	_, err = db.DB.ExecContext(ctx,
+		`UPDATE posts SET status='publishing', updated_at=NOW() WHERE id=$1`, postID)
+	if err != nil {
+		return err
+	}
+
+	connections, err := loadConnections(ctx, workspaceID, post.Platforms)
+	if err != nil {
+		_ = markFailed(ctx, postID, err.Error())
+		return err
+	}
+
+	var firstErr error
+	for _, conn := range connections {
+		adapter := adapterFor(conn.Platform)
+		if adapter == nil {
+			continue
+		}
+		if _, pubErr := adapter.Publish(ctx, post, conn); pubErr != nil {
+			firstErr = pubErr
+		}
+	}
+
+	if firstErr != nil {
+		_ = markFailed(ctx, postID, firstErr.Error())
+		return firstErr
+	}
+
+	_, err = db.DB.ExecContext(ctx,
+		`UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW() WHERE id=$1`, postID)
+	return err
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Internal helpers
+// ──────────────────────────────────────────────────────────────────────────────
+
+func adapterFor(p domain.Platform) platform.Publisher {
+	switch p {
+	case domain.PlatformLinkedIn:
+		return linkedin.New()
+	case domain.PlatformMetaFB, domain.PlatformMetaIG:
+		return meta.New()
+	case domain.PlatformX:
+		return xplatform.New()
+	}
+	return nil
+}
+
+func loadConnections(ctx context.Context, workspaceID string, platforms []domain.Platform) ([]*domain.PlatformConnection, error) {
+	placeholders := make([]string, len(platforms))
+	args := []any{workspaceID}
+	for i, p := range platforms {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args = append(args, string(p))
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+		FROM platform_connections
+		WHERE workspace_id=$1 AND platform IN (%s)
+	`, joinStrings(placeholders, ","))
+
+	rows, err := db.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var conns []*domain.PlatformConnection
+	for rows.Next() {
+		c := &domain.PlatformConnection{}
+		err := rows.Scan(&c.ID, &c.WorkspaceID, &c.Platform, &c.AccountID,
+			&c.AccountName, &c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		conns = append(conns, c)
+	}
+	return conns, rows.Err()
+}
+
+func markFailed(ctx context.Context, postID, reason string) error {
+	_, err := db.DB.ExecContext(ctx,
+		`UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW() WHERE id=$2`,
+		reason, postID)
+	return err
+}
+
+func joinStrings(ss []string, sep string) string {
+	result := ""
+	for i, s := range ss {
+		if i > 0 {
+			result += sep
+		}
+		result += s
+	}
+	return result
+}
+
+type scannable interface {
+	Scan(dest ...any) error
+}
+
+func scanPost(row *sql.Row) (*domain.Post, error) {
+	return scanPostFromScanner(row)
+}
+
+func scanPostRow(row *sql.Rows) (*domain.Post, error) {
+	return scanPostFromScanner(row)
+}
+
+func scanPostFromScanner(s scannable) (*domain.Post, error) {
+	var p domain.Post
+	var mediaJSON, platformJSON []byte
+	var status string
+
+	err := s.Scan(
+		&p.ID, &p.WorkspaceID, &p.AuthorID, &p.Content,
+		&mediaJSON, &platformJSON, &status,
+		&p.ScheduledAt, &p.PublishedAt, &p.FailReason,
+		&p.CreatedAt, &p.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("post not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	p.Status = domain.PostStatus(status)
+	_ = json.Unmarshal(mediaJSON, &p.MediaURLs)
+	_ = json.Unmarshal(platformJSON, &p.Platforms)
+	return &p, nil
+}

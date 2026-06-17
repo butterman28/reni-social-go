@@ -2,68 +2,61 @@ package main
 
 import (
 	"database/sql"
-	"dogo/internal/utils"
-	"dogo/internal/workers" // Adjust path to your worker package
-	"dogo/pkg/config"
-	"dogo/pkg/db"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
-	_ "image/jpeg"
-	_ "image/png"
-
-	_ "golang.org/x/image/webp"
+	"reni-social/internal/media"
+	"reni-social/internal/scheduler"
+	"reni-social/internal/utils"
+	"reni-social/pkg/config"
+	"reni-social/pkg/db"
 )
 
 func main() {
-	// 1. Initialize Global Connections
+	// 1. Initialize global connections
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect()
 	utils.InitRedis()
 
-	// 2. Start Workers Independently
-	// Each worker gets its own supervisor loop and goroutine
-	go supervise(workers.StartEventMediaWorker, "Event Media Worker")
+	// 2. Start workers — each runs under a supervisor that auto-restarts on panic/exit
+	go supervise(scheduler.StartPoller, "Post Scheduler Poller")
+	go supervise(scheduler.StartConsumer, "Post Queue Consumer")
+	go supervise(media.StartMediaWorker, "Media Processing Worker")
 
-	fmt.Println("Dogo Worker Services are running...")
+	fmt.Println("🚀 Reni Social Worker is running...")
 
-	// 3. Block forever
+	// 3. Block forever — workers run in goroutines above
 	select {}
 }
 
-// supervise handles the recovery and restart logic for a specific worker
+// supervise wraps a worker function in a restart loop with panic recovery.
+// If the worker panics or returns, it is restarted after a 5-second backoff.
 func supervise(workerFunc func(*sql.DB), workerName string) {
 	for {
 		log.Printf("🔄 [Supervisor] Starting %s...", workerName)
 
-		// Execute the worker and capture any panics/errors
 		err := runWithRecovery(workerFunc)
-
 		if err != nil {
-			log.Printf("⚠️ [Supervisor] %s stopped: %v. Restarting in 5s...", workerName, err)
+			log.Printf("⚠️  [Supervisor] %s stopped with error: %v — restarting in 5s...", workerName, err)
 		} else {
-			log.Printf("ℹ️ [Supervisor] %s exited cleanly. Restarting in 5s...", workerName)
+			log.Printf("ℹ️  [Supervisor] %s exited cleanly — restarting in 5s...", workerName)
 		}
 
-		// Avoid rapid-fire restart loops if the error is persistent (like missing FFmpeg)
 		time.Sleep(5 * time.Second)
 	}
 }
 
-// runWithRecovery wraps the worker call in a defer/recover block
+// runWithRecovery executes the worker and catches any panics, converting them to errors.
 func runWithRecovery(workerFunc func(*sql.DB)) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// Capture the panic and turn it into an error
 			err = fmt.Errorf("panic: %v", r)
-			log.Printf("🔥 CRITICAL: Recovered from panic in worker: %v", r)
+			log.Printf("🔥 [Supervisor] Recovered from panic: %v", r)
 		}
 	}()
 
-	// Call the actual worker function
 	workerFunc(db.DB)
-
 	return nil
 }

@@ -1,25 +1,39 @@
 package utils
 
 import (
-	"dogo/pkg/config"
-	"dogo/internal/types"
 	"fmt"
 	"time"
+
+	"reni-social/pkg/config"
 )
 
-func SendEmail(to string, subject string, body string) error {
-	var res types.ReniMailRes
-	var payload types.EmailPayload
+// emailPayload is the request body for the Reni mail API.
+type emailPayload struct {
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Body    string `json:"body"`
+	Sender  string `json:"sender"`
+}
 
-	payload.To = to
-	payload.Subject = subject
-	payload.Body = body
-	payload.Sender = "Biki"
+// reniMailRes is the response from the Reni mail API.
+type reniMailRes struct {
+	Status  bool   `json:"status"`
+	Message string `json:"message"`
+}
 
-	err := DoRequest(types.RequestOptions{
+// SendEmail sends a transactional email via the configured Reni mail API.
+func SendEmail(to, subject, body string) error {
+	var res reniMailRes
+
+	err := DoRequest(RequestOptions{
 		Method: "POST",
 		URL:    config.C.ReniApiBaseUrl + "/v1/mail/ra/api/email/send",
-		Body:   payload,
+		Body: emailPayload{
+			To:      to,
+			Subject: subject,
+			Body:    body,
+			Sender:  "Reni Social",
+		},
 		Headers: map[string]string{
 			"Authorization": "Bearer " + config.C.ReniApiKey,
 		},
@@ -35,5 +49,4 @@ func SendEmail(to string, subject string, body string) error {
 	}
 
 	return nil
-
 }

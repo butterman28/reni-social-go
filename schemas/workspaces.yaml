@@ -1,0 +1,26 @@
+table: workspaces
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  owner_id:
+    type: uuid
+    not_null: true
+  name:
+    type: varchar(255)
+    not_null: true
+  slug:
+    type: varchar(255)
+    not_null: true
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_workspaces_slug_unique
+    columns: [slug]
+    unique: true
+  - name: idx_workspaces_owner_id
+    columns: [owner_id]

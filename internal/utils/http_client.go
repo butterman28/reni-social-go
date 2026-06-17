@@ -6,62 +6,64 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	// "time"
-	"dogo/internal/types"
+	"time"
 )
 
-// DoRequest executes an HTTP request and returns response body or error
-func DoRequest(options types.RequestOptions, result interface{}) error {
-	// Marshal body if present
+// RequestOptions configures an outgoing HTTP request.
+type RequestOptions struct {
+	Method  string
+	URL     string
+	Body    any
+	Headers map[string]string
+	Timeout time.Duration
+}
+
+// DoRequest executes an HTTP request, marshals the body, and decodes the JSON response.
+func DoRequest(options RequestOptions, result any) error {
 	var bodyBytes []byte
 	if options.Body != nil {
 		var err error
 		bodyBytes, err = json.Marshal(options.Body)
 		if err != nil {
-			return fmt.Errorf("failed to marshal body: %v", err)
+			return fmt.Errorf("marshal body: %v", err)
 		}
 	}
 
-	// Create HTTP request
 	req, err := http.NewRequest(options.Method, options.URL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
+		return fmt.Errorf("create request: %v", err)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range options.Headers {
 		req.Header.Set(k, v)
 	}
 
-	// Set timeout
-	client := &http.Client{
-		Timeout: options.Timeout,
+	timeout := options.Timeout
+	if timeout == 0 {
+		timeout = 15 * time.Second
 	}
 
-	// Perform request
+	client := &http.Client{Timeout: timeout}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Read response
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response: %v", err)
+		return fmt.Errorf("read response: %v", err)
 	}
 
-	// Optional: handle HTTP errors
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBytes))
 	}
 
-	// Decode JSON if result is provided
 	if result != nil {
 		if err := json.Unmarshal(respBytes, result); err != nil {
-			return fmt.Errorf("failed to decode response JSON: %v", err)
+			return fmt.Errorf("decode response JSON: %v", err)
 		}
 	}
 

@@ -16,12 +16,45 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
+	// Legacy fields (kept for backward compat)
 	ReniApiKey     string
 	ReniApiBaseUrl string
+	AppUrl         string
 
-	EventMediaJob         string
-	AppUrl                string
-	PlatformFeePercentage float64
+	// ──────────────────────────────────────────
+	// LinkedIn OAuth2
+	// ──────────────────────────────────────────
+	LinkedInClientID     string
+	LinkedInClientSecret string
+	LinkedInRedirectURL  string
+
+	// ──────────────────────────────────────────
+	// Meta (Facebook / Instagram) App
+	// ──────────────────────────────────────────
+	MetaAppID       string
+	MetaAppSecret   string
+	MetaRedirectURL string
+
+	// ──────────────────────────────────────────
+	// X (Twitter) v2
+	// ──────────────────────────────────────────
+	XAPIKey            string
+	XAPISecret         string
+	XAccessToken       string
+	XAccessTokenSecret string
+	XRedirectURL       string
+
+	// ──────────────────────────────────────────
+	// Scheduler
+	// ──────────────────────────────────────────
+	SchedulerPollIntervalSecs int    // e.g. 30
+	ScheduledPostsQueue       string // Redis key, e.g. "social:post_queue"
+
+	// ──────────────────────────────────────────
+	// Media Worker
+	// ──────────────────────────────────────────
+	MediaWorkerQueue string // Redis key, e.g. "social:media_jobs"
+	FFmpegPath       string // e.g. "/usr/bin/ffmpeg"
 }
 
 var C *Config

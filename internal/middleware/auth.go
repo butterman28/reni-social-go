@@ -1,36 +1,38 @@
 package middleware
 
 import (
-	"github.com/gofiber/fiber/v2"
-	// "valsafe/internal/utils"
-	"fmt"
 	"strings"
+
+	"reni-social/internal/utils"
+
+	"github.com/gofiber/fiber/v2"
 )
 
+// AuthMiddleware validates the Bearer session token from Authorization header.
+// It looks up the token in Redis and stores the resolved userID in fiber locals.
 func AuthMiddleware(c *fiber.Ctx) error {
-	// --- 1. Validate Authorization header ---
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return c.Status(401).JSON(fiber.Map{"error": "Missing Authorization header"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing Authorization header"})
 	}
 
-	// Expect header format: "Bearer <token>"
-	parts := strings.Split(authHeader, " ")
+	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return c.Status(401).JSON(fiber.Map{"error": "Invalid Authorization header format"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid Authorization header format"})
 	}
-	token := parts[1]
 
+	token := strings.TrimSpace(parts[1])
 	if token == "" {
-		fmt.Println("header error - ", token)
-		return c.Status(400).JSON(fiber.Map{"error": "Missing required headers"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing session token"})
 	}
 
-	// Store userID in context for later handlers
-	// c.Locals("userToken", userToken)
-	// c.Locals("userToken", usertoken)
+	userID, err := utils.GetSession(token)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired session"})
+	}
+
+	c.Locals("userid", userID)
+	c.Locals("token", token)
 
 	return c.Next()
-
-	// return nil
 }

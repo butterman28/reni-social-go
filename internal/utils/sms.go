@@ -1,25 +1,31 @@
 package utils
 
 import (
-	"dogo/internal/types"
-	"dogo/pkg/config"
 	"fmt"
 	"time"
+
+	"reni-social/pkg/config"
 )
 
-// SendSMS sends an SMS via the Reni SMS gateway API.
+// smsPayload is the request body for the Reni SMS API.
+type smsPayload struct {
+	To     string `json:"to"`
+	Body   string `json:"body"`
+	Sender string `json:"sender"`
+}
+
+// SendSMS sends an SMS via the configured Reni SMS gateway API.
 func SendSMS(to, message string) error {
-	var res types.ReniMailRes
-	var payload types.SMSPayload
+	var res reniMailRes // reuses the status/message response shape from email.go
 
-	payload.To = to
-	payload.Body = message
-	payload.Sender = "Biki"
-
-	err := DoRequest(types.RequestOptions{
+	err := DoRequest(RequestOptions{
 		Method: "POST",
 		URL:    config.C.ReniApiBaseUrl + "/v1/mail/ra/api/sms/send",
-		Body:   payload,
+		Body: smsPayload{
+			To:     to,
+			Body:   message,
+			Sender: "Reni Social",
+		},
 		Headers: map[string]string{
 			"Authorization": "Bearer " + config.C.ReniApiKey,
 		},

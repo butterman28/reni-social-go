@@ -1,0 +1,23 @@
+table: workspace_members
+columns:
+  workspace_id:
+    type: uuid
+    not_null: true
+  user_id:
+    type: uuid
+    not_null: true
+  role:
+    type: varchar(50)
+    not_null: true
+    default: "'member'"
+  joined_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_workspace_members_pk
+    columns: [workspace_id, user_id]
+    unique: true
+  - name: idx_workspace_members_user
+    columns: [user_id]
