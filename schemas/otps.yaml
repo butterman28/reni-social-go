@@ -1,0 +1,31 @@
+table: otps
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  identifier:
+    type: varchar(255)
+    not_null: true
+  otp_code:
+    type: varchar(10)
+    not_null: true
+  channel:
+    type: varchar(10)
+    not_null: true
+  expires_at:
+    type: timestamptz
+    not_null: true
+  attempts:
+    type: integer
+    not_null: true
+    default: 0
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_otps_identifier
+    columns: [identifier]
+    unique: false

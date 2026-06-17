@@ -1,0 +1,48 @@
+table: users
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  email:
+    type: varchar(255)
+    not_null: false
+  phone_number:
+    type: varchar(30)
+    not_null: false
+  is_email_verified:
+    type: boolean
+    not_null: true
+    default: false
+  is_phone_verified:
+    type: boolean
+    not_null: true
+    default: false
+  password_hash:
+    type: varchar(255)
+    not_null: false
+  first_name:
+    type: varchar(100)
+    not_null: false
+  last_name:
+    type: varchar(100)
+    not_null: false
+  profile_picture:
+    type: varchar(500)
+    not_null: false
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+  is_admin:
+    type: boolean
+    not_null: true
+    default: false
+
+indexes:
+  - name: idx_users_email_unique
+    columns: [email]
+    unique: true
+  - name: idx_users_phone_unique
+    columns: [phone_number]
+    unique: true

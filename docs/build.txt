@@ -1,0 +1,17 @@
+# DEV
+GOOS=linux GOARCH=amd64 go build -o bin/api-dev ./cmd/api
+
+# PROD
+GOOS=linux GOARCH=amd64 go build -tags=prod -o bin/api ./cmd/api
+
+
+to set OS environmnet for linux
+GOOS=linux GOARCH=amd64
+
+to set OS environment for linux using powershell
+$env:GOOS="linux"
+$env:GOARCH="amd64"
+
+or 
+
+$env:GOOS="linux"; $env:GOARCH="amd64";

@@ -1,0 +1,36 @@
+table: driver_profiles
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  user_id:
+    type: uuid
+    not_null: true
+    references:
+      table: users
+      column: id
+      on_delete: cascade
+  license_number:
+    type: varchar(100)
+    not_null: true
+  background_check_status:
+    type: varchar(50)
+    not_null: true
+    default: "'pending'"
+  vehicle_details:
+    type: varchar(1000)
+    not_null: true
+  is_active_now:
+    type: boolean
+    not_null: true
+    default: false
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_driver_profiles_user_id_unique
+    columns: [user_id]
+    unique: true
