@@ -5,9 +5,9 @@
 // Media upload: POST https://upload.twitter.com/1.1/media/upload.json (chunked INIT/APPEND/FINALIZE)
 //
 // OAuth 1.0a callback flow:
-//   1. GET  /oauth/request_token  → get oauth_token (request token)
-//   2. Redirect user to https://api.twitter.com/oauth/authorize?oauth_token=...
-//   3. GET  /oauth/access_token   → exchange verifier for access token + secret
+//  1. GET  /oauth/request_token  → get oauth_token (request token)
+//  2. Redirect user to https://api.twitter.com/oauth/authorize?oauth_token=...
+//  3. GET  /oauth/access_token   → exchange verifier for access token + secret
 package x
 
 import (

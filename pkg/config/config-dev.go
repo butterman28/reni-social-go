@@ -3,42 +3,62 @@
 
 package config
 
+import (
+	"os"
+
+	"github.com/joho/godotenv" // We will install this in Step 4
+)
+
+// getEnv reads an environment variable or returns a fallback default
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
 func init() {
+	// Load .env file if it exists (safe to ignore error if running in prod)
+	_ = godotenv.Load()
+
 	C = &Config{
 		Port:  "1040",
 		IsDev: true,
-
-		DBURL: "postgres://reni:reni@127.0.0.1:5432/reni_social_dev?sslmode=disable",
-
+		
+		// Now pulled from .env!
+		DBURL: getEnv("DBURL", "postgres://reni:reni@127.0.0.1:5432/reni_social_dev?sslmode=disable"),
+		
 		USE_TLS:   false,
 		CERT_FILE: "/etc/letsencrypt/live/srv1.fireswitch.ng/fullchain.pem",
 		KEY_FILE:  "/etc/letsencrypt/live/srv1.fireswitch.ng/privkey.pem",
-
+		
 		RedisHost:     "127.0.0.1",
 		RedisPort:     "6379",
 		RedisPassword: "",
 		RedisDB:       7,
+		
+		ReniApiKey:     os.Getenv("RENI_API_KEY"),
+		ReniApiBaseUrl: os.Getenv("RENI_API_BASE_URL"),
+		AppUrl:         getEnv("APP_URL", "http://localhost:1040"),
 
-		ReniApiKey:     "",
-		ReniApiBaseUrl: "",
-		AppUrl:         "http://localhost:1040",
-
-		// LinkedIn (dev — replace with real app credentials)
-		LinkedInClientID:     "dev_linkedin_client_id",
-		LinkedInClientSecret: "dev_linkedin_client_secret",
-		LinkedInRedirectURL:  "http://localhost:1040/api/workspaces/connect/linkedin/callback",
+		// ──────────────────────────────────────────
+		// LinkedIn (dev) - Now pulled from environment!
+		// ──────────────────────────────────────────
+		LinkedInClientID:     os.Getenv("LINKEDIN_CLIENT_ID"),
+		LinkedInClientSecret: os.Getenv("LINKEDIN_CLIENT_SECRET"),
+		LinkedInRedirectURL:  getEnv("LINKEDIN_REDIRECT_URL", "http://localhost:1040/api/workspaces/connect/linkedin/callback"),
 
 		// Meta (dev)
-		MetaAppID:       "dev_meta_app_id",
-		MetaAppSecret:   "dev_meta_app_secret",
-		MetaRedirectURL: "http://localhost:1040/api/workspaces/connect/meta/callback",
+		MetaAppID:       os.Getenv("META_APP_ID"),
+		MetaAppSecret:   os.Getenv("META_APP_SECRET"),
+		MetaRedirectURL: getEnv("META_REDIRECT_URL", "http://localhost:1040/api/workspaces/connect/meta/callback"),
 
 		// X / Twitter (dev)
-		XAPIKey:            "dev_x_api_key",
-		XAPISecret:         "dev_x_api_secret",
-		XAccessToken:       "dev_x_access_token",
-		XAccessTokenSecret: "dev_x_access_token_secret",
-		XRedirectURL:       "http://localhost:1040/api/workspaces/connect/x/callback",
+		XAPIKey:            os.Getenv("X_API_KEY"),
+		XAPISecret:         os.Getenv("X_API_SECRET"),
+		XAccessToken:       os.Getenv("X_ACCESS_TOKEN"),
+		XAccessTokenSecret: os.Getenv("X_ACCESS_TOKEN_SECRET"),
+		XRedirectURL:       getEnv("X_REDIRECT_URL", "http://localhost:1040/api/workspaces/connect/x/callback"),
 
 		// Scheduler
 		SchedulerPollIntervalSecs: 30,
@@ -46,6 +66,6 @@ func init() {
 
 		// Media worker
 		MediaWorkerQueue: "social:media_jobs_dev",
-		FFmpegPath:       "ffmpeg", // assumes ffmpeg is on PATH
+		FFmpegPath:       "ffmpeg", 
 	}
 }
