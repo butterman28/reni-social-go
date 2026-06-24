@@ -33,7 +33,7 @@ import (
 
 const (
 	requestTokenURL = "https://api.twitter.com/oauth/request_token"
-	authorizeURL    = "https://api.twitter.com/oauth/authorize"
+	xAuthorizeURL = "https://api.twitter.com/oauth/authorize"
 	accessTokenURL  = "https://api.twitter.com/oauth/access_token"
 	tweetsURL       = "https://api.twitter.com/2/tweets"
 	mediaUploadURL  = "https://upload.twitter.com/1.1/media/upload.json"
@@ -87,8 +87,10 @@ func (c *Client) RequestToken(ctx context.Context) (oauthToken, authorizeURL str
 	if token == "" {
 		return "", "", fmt.Errorf("x: empty oauth_token in response: %s", string(body))
 	}
+	fmt.Println("AUTH HEADER:")
+	fmt.Println(header)
 
-	return token, authorizeURL + "?oauth_token=" + token, nil
+	return token, xAuthorizeURL + "?oauth_token=" + token, nil
 }
 
 // ExchangeVerifier exchanges an oauth_token + oauth_verifier for permanent access credentials.
@@ -250,12 +252,106 @@ func (c *Client) buildOAuth1Header(method, rawURL string, extraParams url.Values
 	for k, vs := range oauthParams {
 		if strings.HasPrefix(k, "oauth_") {
 			for _, v := range vs {
-				headerParts = append(headerParts, `"`+url.QueryEscape(k)+`"="`+url.QueryEscape(v)+`"`)
+				headerParts = append(headerParts,k+`="`+url.QueryEscape(v)+`"`)
 			}
 		}
 	}
 	sort.Strings(headerParts)
 	return "OAuth " + strings.Join(headerParts, ", ")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Fetching Objects (X API v2)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// GetTweet fetches a single tweet by ID.
+// Use params to specify tweet.fields, expansions, etc.
+func (c *Client) GetTweet(ctx context.Context, conn *domain.PlatformConnection, tweetID string, params url.Values) (map[string]any, error) {
+	endpoint := fmt.Sprintf("https://api.twitter.com/2/tweets/%s", tweetID)
+	return c.doV2Get(ctx, conn, endpoint, params)
+}
+
+// GetUser fetches a single user by ID.
+// Use params to specify user.fields.
+func (c *Client) GetUser(ctx context.Context, conn *domain.PlatformConnection, userID string, params url.Values) (map[string]any, error) {
+	endpoint := fmt.Sprintf("https://api.twitter.com/2/users/%s", userID)
+	return c.doV2Get(ctx, conn, endpoint, params)
+}
+
+// GetSpace fetches a single space by ID.
+// Use params to specify space.fields.
+func (c *Client) GetSpace(ctx context.Context, conn *domain.PlatformConnection, spaceID string, params url.Values) (map[string]any, error) {
+	endpoint := fmt.Sprintf("https://api.twitter.com/2/spaces/%s", spaceID)
+	return c.doV2Get(ctx, conn, endpoint, params)
+}
+
+// GetList fetches a single list by ID.
+// Use params to specify list.fields.
+func (c *Client) GetList(ctx context.Context, conn *domain.PlatformConnection, listID string, params url.Values) (map[string]any, error) {
+	endpoint := fmt.Sprintf("https://api.twitter.com/2/lists/%s", listID)
+	return c.doV2Get(ctx, conn, endpoint, params)
+}
+
+// GetTweetWithIncludes fetches a tweet and expands all available includes:
+// Media, Polls, Places, and the Author (User).
+// This demonstrates how to use media.fields, poll.fields, and place.fields,
+// as X API v2 does not have direct endpoints for these objects.
+func (c *Client) GetTweetWithIncludes(ctx context.Context, conn *domain.PlatformConnection, tweetID string) (map[string]any, error) {
+	params := url.Values{}
+	
+	// Expansions tell X to include the full objects for these IDs
+	params.Set("expansions", "attachments.media_keys,attachments.poll_ids,geo.place_id,author_id")
+	
+	// Fields for the tweet itself
+	params.Set("tweet.fields", "created_at,author_id,geo,attachments,entities")
+	
+	// Fields for the expanded objects (Media, Poll, Place, User)
+	params.Set("media.fields", "media_key,type,url,preview_image_url,alt_text")
+	params.Set("poll.fields", "id,options,voting_status,end_datetime")
+	params.Set("place.fields", "id,full_name,country,country_code,geo")
+	params.Set("user.fields", "id,name,username,profile_image_url")
+
+	return c.GetTweet(ctx, conn, tweetID, params)
+}
+
+// doV2Get is a helper that signs a GET request with OAuth 1.0a and returns the decoded JSON.
+func (c *Client) doV2Get(ctx context.Context, conn *domain.PlatformConnection, endpoint string, params url.Values) (map[string]any, error) {
+	accessToken := conn.AccessToken
+	accessSecret := conn.RefreshToken
+
+	// buildOAuth1Header will automatically include the query params in the signature base string
+	header := c.buildOAuth1Header(http.MethodGet, endpoint, params,
+		config.C.XAPIKey, config.C.XAPISecret, accessToken, accessSecret)
+
+	rawURL := endpoint
+	if len(params) > 0 {
+		rawURL += "?" + params.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("x: build request: %w", err)
+	}
+	req.Header.Set("Authorization", header)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("x: do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("x: request failed (%d): %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// We return map[string]any because X API v2 returns dynamic fields based on what you request
+	var result map[string]any
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		return nil, fmt.Errorf("x: decode response: %w", err)
+	}
+
+	return result, nil
 }
 
 func generateNonce() string {
