@@ -42,6 +42,7 @@ func Setup(app *fiber.App) {
 	in.Post("/workspaces", workspace.Create)
 	in.Get("/workspaces", workspace.ListMine)
 	in.Get("/workspaces/in/:id", workspace.GetOne)
+	in.Get("/workspaces/in/slug/:slug", workspace.GetOneBySlug)
 
 	// Workspace members
 	in.Post("/workspaces/in/:id/members", workspace.Invite)

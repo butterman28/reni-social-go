@@ -64,6 +64,26 @@ func GetOne(c *fiber.Ctx) error {
 	})
 }
 
+// GetOneBySlug handles GET /api/workspaces/in/slug/:slug
+func GetOneBySlug(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	slug := c.Params("slug")
+
+	ws, err := GetWorkspaceBySlug(c.Context(), slug, userID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status:  true,
+		Message: "OK",
+		Data:    ws,
+	})
+}
+
 // ListMine handles GET /api/workspaces
 func ListMine(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)

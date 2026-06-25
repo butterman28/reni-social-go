@@ -97,6 +97,24 @@ func GetWorkspace(ctx context.Context, workspaceID, userID string) (*domain.Work
 	return &ws, nil
 }
 
+// GetWorkspaceBySlug fetches a workspace the user is a member of using its slug.
+func GetWorkspaceBySlug(ctx context.Context, slug, userID string) (*domain.Workspace, error) {
+	var ws domain.Workspace
+	err := db.DB.QueryRowContext(ctx, `
+		SELECT w.id, w.owner_id, w.name, w.slug, w.created_at
+		FROM workspaces w
+		JOIN workspace_members m ON m.workspace_id = w.id
+		WHERE w.slug = $1 AND m.user_id = $2
+	`, slug, userID).Scan(&ws.ID, &ws.OwnerID, &ws.Name, &ws.Slug, &ws.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("workspace not found or access denied")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get workspace by slug: %w", err)
+	}
+	return &ws, nil
+}
+
 // ListMyWorkspaces returns all workspaces the user belongs to.
 func ListMyWorkspaces(ctx context.Context, userID string) ([]domain.Workspace, error) {
 	rows, err := db.DB.QueryContext(ctx, `
@@ -142,6 +160,21 @@ func InviteMember(ctx context.Context, workspaceID, callerID string, req InviteM
 	}
 	if err != nil {
 		return fmt.Errorf("lookup user: %w", err)
+	}
+
+	// Check if the user is already a member
+	var exists bool
+	err = db.DB.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM workspace_members 
+			WHERE workspace_id = $1 AND user_id = $2
+		)
+	`, workspaceID, targetID).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("check membership: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("user is already a member of this workspace")
 	}
 
 	role := req.Role
