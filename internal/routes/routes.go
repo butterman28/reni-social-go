@@ -47,7 +47,7 @@ func Setup(app *fiber.App) {
 	// Workspace members
 	in.Post("/workspaces/in/:id/members", workspace.Invite)
 	in.Get("/workspaces/in/:id/members", workspace.Members)
-	in.Delete("/workspaces/in/:id/members/:userId", workspace.RemoveMemberHandler)
+	in.Delete("/workspaces/in/:id/members/in/:userId", workspace.RemoveMemberHandler)
 
 	// Platform connections (OAuth)
 	in.Get("/workspaces/in/:id/connections", workspace.Connections)

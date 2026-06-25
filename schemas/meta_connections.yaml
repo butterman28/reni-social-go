@@ -1,0 +1,32 @@
+table: meta_connections
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  workspace_id:
+    type: uuid
+    not_null: true
+  account_id:
+    type: varchar(255)
+    not_null: true
+  account_name:
+    type: varchar(255)
+    not_null: false
+  access_token:
+    type: text
+    not_null: true
+  refresh_token:
+    type: text
+    not_null: false
+  expires_at:
+    type: timestamptz
+    not_null: false
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_meta_connections_workspace
+    columns: [workspace_id]
