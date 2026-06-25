@@ -158,7 +158,7 @@ func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 		URL:    config.C.ReniCentralService + "/auth/login",
 		Body:   req,
 		Headers: map[string]string{
-			"Authorization": "Bearer " + config.C.ReniApiKey,
+			"Authorization": "Bearer " + config.C.ReniCentralKey,
 		},
 		Timeout: 30 * time.Second,
 	}, &res)
@@ -292,7 +292,7 @@ func RegisterEmail(ctx context.Context, req RegisterEmailRequest) (*RegisterEmai
 		URL:    config.C.ReniCentralService + "/auth/register/email",
 		Body:   req,
 		Headers: map[string]string{
-			"Authorization": "Bearer " + config.C.ReniApiKey,
+			"Authorization": "Bearer " + config.C.ReniCentralKey,
 		},
 		Timeout: 30 * time.Second,
 	}, &res)
@@ -326,7 +326,7 @@ func ActivateEmail(ctx context.Context, req ActivateEmailRequest) (*ActivateEmai
 		URL:    config.C.ReniCentralService + "/auth/register/email/activate",
 		Body:   req,
 		Headers: map[string]string{
-			"Authorization": "Bearer " + config.C.ReniApiKey,
+			"Authorization": "Bearer " + config.C.ReniCentralKey,
 		},
 		Timeout: 30 * time.Second,
 	}, &res)
@@ -373,7 +373,7 @@ func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*Comple
 		URL:    config.C.ReniCentralService + "/auth/register/complete",
 		Body:   req,
 		Headers: map[string]string{
-			"Authorization": "Bearer " + config.C.ReniApiKey,
+			"Authorization": "Bearer " + config.C.ReniCentralKey,
 		},
 		Timeout: 30 * time.Second,
 	}, &res)
@@ -415,4 +415,3 @@ func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*Comple
 
 	return &res, nil
 }
-

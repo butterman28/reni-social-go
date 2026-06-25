@@ -21,6 +21,7 @@ type Config struct {
 	ReniApiBaseUrl string
 	AppUrl         string
 	ReniCentralService string
+	ReniCentralKey     string
 
 	// ──────────────────────────────────────────
 	// LinkedIn OAuth2

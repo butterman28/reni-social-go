@@ -41,6 +41,7 @@ func init() {
 		ReniApiBaseUrl:     os.Getenv("RENI_API_BASE_URL"),
 		AppUrl:             getEnv("APP_URL", "http://localhost:1040"),
 		ReniCentralService: "https://srv.fireswitch.ng:1030",
+		ReniCentralKey:     getEnv("RENI_CENTRAL_KEY", "$newReniCentral"),
 
 		// ──────────────────────────────────────────
 		// LinkedIn (dev) - Now pulled from environment!

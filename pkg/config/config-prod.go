@@ -23,6 +23,8 @@ func init() {
 		ReniApiBaseUrl:     "",
 		AppUrl:             "https://srv.fireswitch.ng:1041",
 		ReniCentralService: "https://srv.fireswitch.ng:1030",
+		ReniCentralKey:     getEnv("RENI_CENTRAL_KEY", "$newReniCentral"),
+		
 
 		// LinkedIn (prod — set via environment / secrets manager)
 		LinkedInClientID:     "CHANGE_ME",
