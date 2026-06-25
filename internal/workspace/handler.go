@@ -100,6 +100,16 @@ func Invite(c *fiber.Ctx) error {
 		})
 	}
 
+	switch req.Role {
+	case "", domain.RoleMember, domain.RoleAdmin, domain.RoleOwner:
+		// Valid roles (empty string defaults to member in the service layer)
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Invalid role",
+		})
+	}
+
 	if err := InviteMember(c.Context(), wsID, userID, req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
 			Status:  false,
