@@ -4,6 +4,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	"net/url"
+
 	"reni-social/internal/domain"
 	"reni-social/internal/platform/linkedin"
 	"reni-social/internal/platform/meta"
@@ -221,12 +223,12 @@ func ConnectPlatform(c *fiber.Ctx) error {
 	var redirectURL string
 	switch p {
 	case "linkedin":
-		redirectURL = linkedin.AuthorizationURL(state)
+		redirectURL = linkedin.AuthorizationURL(state, wsID, p)
 	case "meta":
-		redirectURL = meta.AuthorizationURL(state)
+		redirectURL = meta.AuthorizationURL(state, wsID, p)
 	case "x":
 		xClient := xplatform.New()
-		_, authURL, err := xClient.RequestToken(c.Context())
+		_, authURL, err := xClient.RequestToken(c.Context(), wsID, p)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
 				Status:  false,
@@ -258,19 +260,13 @@ func OAuthCallback(c *fiber.Ctx) error {
 	// Verify state
 	storedWsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
 	if err != nil || storedWsID != wsID {
-		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Invalid or expired OAuth state",
-		})
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid or expired OAuth state"))
 	}
 	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
 
 	wsUUID, err := uuid.Parse(wsID)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Invalid workspace ID",
-		})
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid workspace ID"))
 	}
 
 	var conn *domain.PlatformConnection
@@ -281,33 +277,24 @@ func OAuthCallback(c *fiber.Ctx) error {
 		conn, err = client.ExchangeCode(c.Context(), code)
 	case "meta":
 		client := meta.New()
-		conn, err = client.ExchangeCode(c.Context(), code, "meta_fb")
+		conn, err = client.ExchangeCode(c.Context(), code, "meta_ig")
 	case "x":
 		client := xplatform.New()
 		oauthToken := c.Query("oauth_token")
 		oauthVerifier := c.Query("oauth_verifier")
 		conn, err = client.ExchangeVerifier(c.Context(), oauthToken, oauthVerifier)
 	default:
-		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Unsupported platform",
-		})
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Unsupported platform"))
 	}
 
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "OAuth exchange failed: " + err.Error(),
-		})
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
 	}
 
 	conn.WorkspaceID = wsUUID
 
 	if err := SaveConnection(c.Context(), conn); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Failed to save connection",
-		})
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
 	}
 
 	// Redirect to frontend success page

@@ -255,42 +255,113 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 		return nil, err
 	}
 
-	rows, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
-		FROM platform_connections WHERE workspace_id = $1
-		ORDER BY created_at DESC
-	`, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
 	var conns []domain.PlatformConnection
-	for rows.Next() {
-		var c domain.PlatformConnection
-		if err := rows.Scan(&c.ID, &c.WorkspaceID, &c.Platform, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err != nil {
-			return nil, err
+
+	// Query LinkedIn
+	rowsLI, err := db.DB.QueryContext(ctx, `
+		SELECT id, workspace_id, account_id, account_name, expires_at, created_at
+		FROM linkedin_connections WHERE workspace_id = $1
+	`, workspaceID)
+	if err == nil {
+		defer rowsLI.Close()
+		for rowsLI.Next() {
+			var c domain.PlatformConnection
+			c.Platform = domain.PlatformLinkedIn
+			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+				conns = append(conns, c)
+			}
 		}
-		conns = append(conns, c)
 	}
-	return conns, rows.Err()
+
+	// Query Meta
+	rowsMeta, err := db.DB.QueryContext(ctx, `
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
+		FROM meta_connections WHERE workspace_id = $1
+	`, workspaceID)
+	if err == nil {
+		defer rowsMeta.Close()
+		for rowsMeta.Next() {
+			var c domain.PlatformConnection
+			var platformStr string
+			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+				c.Platform = domain.Platform(platformStr)
+				conns = append(conns, c)
+			}
+		}
+	}
+
+	// Query X
+	rowsX, err := db.DB.QueryContext(ctx, `
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1
+	`, workspaceID)
+	if err == nil {
+		defer rowsX.Close()
+		for rowsX.Next() {
+			var c domain.PlatformConnection
+			var platformStr string
+			if err := rowsX.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+				c.Platform = domain.Platform(platformStr)
+				conns = append(conns, c)
+			}
+		}
+	}
+
+	return conns, nil
 }
 
 // SaveConnection upserts a platform connection for a workspace.
 func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error {
 	conn.ID = uuid.New()
-	_, err := db.DB.ExecContext(ctx, `
-		INSERT INTO platform_connections
-		    (id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
-		ON CONFLICT (workspace_id, platform, account_id)
-		DO UPDATE SET
-		    access_token  = EXCLUDED.access_token,
-		    refresh_token = EXCLUDED.refresh_token,
-		    account_name  = EXCLUDED.account_name,
-		    expires_at    = EXCLUDED.expires_at
-	`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
-		conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+	var err error
+
+	switch conn.Platform {
+	case domain.PlatformLinkedIn:
+		_, err = db.DB.ExecContext(ctx, `
+			INSERT INTO linkedin_connections
+			    (id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+			ON CONFLICT (workspace_id, account_id)
+			DO UPDATE SET
+			    access_token  = EXCLUDED.access_token,
+			    refresh_token = EXCLUDED.refresh_token,
+			    account_name  = EXCLUDED.account_name,
+			    expires_at    = EXCLUDED.expires_at
+		`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
+			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+
+	case domain.PlatformMetaFB, domain.PlatformMetaIG:
+		_, err = db.DB.ExecContext(ctx, `
+			INSERT INTO meta_connections
+			    (id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+			ON CONFLICT (workspace_id, account_id)
+			DO UPDATE SET
+			    access_token  = EXCLUDED.access_token,
+			    refresh_token = EXCLUDED.refresh_token,
+			    account_name  = EXCLUDED.account_name,
+			    expires_at    = EXCLUDED.expires_at
+		`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
+			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+
+	case domain.PlatformX:
+		_, err = db.DB.ExecContext(ctx, `
+			INSERT INTO x_connections
+			    (id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+			ON CONFLICT (workspace_id, account_id)
+			DO UPDATE SET
+			    access_token  = EXCLUDED.access_token,
+			    refresh_token = EXCLUDED.refresh_token,
+			    account_name  = EXCLUDED.account_name,
+			    expires_at    = EXCLUDED.expires_at
+		`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
+			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+
+	default:
+		err = fmt.Errorf("unsupported platform: %s", conn.Platform)
+	}
+
 	return err
 }
 
@@ -299,10 +370,10 @@ func DisconnectPlatform(ctx context.Context, workspaceID, connectionID, callerID
 	if err := requireRole(ctx, workspaceID, callerID, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return err
 	}
-	_, err := db.DB.ExecContext(ctx,
-		`DELETE FROM platform_connections WHERE id=$1 AND workspace_id=$2`,
-		connectionID, workspaceID)
-	return err
+	_, _ = db.DB.ExecContext(ctx, `DELETE FROM linkedin_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	_, _ = db.DB.ExecContext(ctx, `DELETE FROM meta_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	_, _ = db.DB.ExecContext(ctx, `DELETE FROM x_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	return nil
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

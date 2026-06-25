@@ -51,8 +51,8 @@ func Setup(app *fiber.App) {
 
 	// Platform connections (OAuth)
 	in.Get("/workspaces/in/:id/connections", workspace.Connections)
-	in.Post("/workspaces/in/:id/connect/:platform", workspace.ConnectPlatform)
-	in.Get("/workspaces/in/:id/connect/:platform/callback", workspace.OAuthCallback)
+	in.Post("/workspaces/in/:id/connect/in/:platform", workspace.ConnectPlatform)
+	in.Get("/workspaces/in/:id/connect/in/:platform/callback", workspace.OAuthCallback)
 	in.Delete("/workspaces/in/:id/connections/:connectionId", workspace.Disconnect)
 
 	// Posts

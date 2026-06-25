@@ -32,7 +32,7 @@ func main() {
 
 	fmt.Println("=================================================================")
 	fmt.Println("STEP 1: Fetching request token...")
-	oauthToken, authURL, err := client.RequestToken(ctx)
+	oauthToken, authURL, err := client.RequestToken(ctx, "manual-test-ws-id", "x")
 	
 	if err != nil {
 		log.Fatalf("❌ RequestToken failed: %v", err)

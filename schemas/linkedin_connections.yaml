@@ -30,3 +30,6 @@ columns:
 indexes:
   - name: idx_linkedin_connections_workspace
     columns: [workspace_id]
+  - name: idx_linkedin_connections_unique
+    columns: [workspace_id, account_id]
+    unique: true

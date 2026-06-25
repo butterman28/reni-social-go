@@ -33,3 +33,6 @@ columns:
 indexes:
   - name: idx_x_connections_workspace
     columns: [workspace_id]
+  - name: idx_x_connections_unique
+    columns: [workspace_id, account_id]
+    unique: true

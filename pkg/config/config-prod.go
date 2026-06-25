@@ -5,8 +5,9 @@ package config
 
 func init() {
 	C = &Config{
-		Port:  "1046",
-		IsDev: false,
+		Port:    "1046",
+		IsDev:   false,
+		BackUrl: "https://srv.fireswitch.ng:1046",
 
 		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_live?sslmode=disable"),
 
@@ -24,7 +25,6 @@ func init() {
 		AppUrl:             "https://srv.fireswitch.ng:1041",
 		ReniCentralService: "https://srv.fireswitch.ng:1030",
 		ReniCentralKey:     getEnv("RENI_CENTRAL_KEY", "$newReniCentral"),
-		
 
 		// LinkedIn (prod — set via environment / secrets manager)
 		LinkedInClientID:     "CHANGE_ME",
