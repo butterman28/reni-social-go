@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -94,10 +95,10 @@ type SigninRequest struct {
 }
 
 type SigninResponse struct {
-	Status     bool           `json:"status"`
-	Message    string         `json:"message"`
-	Data       SigninUserData `json:"data"`
-	HttpStatus int            `json:"http_status"`
+	Status     bool   `json:"status"`
+	Message    string `json:"message"`
+	Data       any    `json:"data"`
+	HttpStatus int    `json:"http_status"`
 }
 
 type SigninUserData struct {
@@ -170,13 +171,22 @@ func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 		return &res, nil
 	}
 
-	centralToken := res.Data.Token
+	dataBytes, err := json.Marshal(res.Data)
+	if err != nil {
+		return nil, err
+	}
+	var data SigninUserData
+	if err := json.Unmarshal(dataBytes, &data); err != nil {
+		return nil, fmt.Errorf("failed to decode login data: %w", err)
+	}
+
+	centralToken := data.Token
 	var localUserID uuid.UUID
 
 	// Check if user exists locally in the database by email
 	err = db.DB.QueryRowContext(ctx, `
 		SELECT id FROM users WHERE email = $1
-	`, res.Data.Mail).Scan(&localUserID)
+	`, data.Mail).Scan(&localUserID)
 
 	if err == sql.ErrNoRows {
 		// User does not exist locally, so we insert them
@@ -188,8 +198,8 @@ func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 				id, email, phone_number, is_email_verified, is_phone_verified,
 				first_name, last_name, fullname, username, gender, created_at, token, avatar_url
 			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-		`, localUserID, res.Data.Mail, res.Data.Phone, true, true,
-			res.Data.Fname, res.Data.Lname, res.Data.Fullname, res.Data.Username, res.Data.Gender, now, centralToken, res.Data.Picture)
+		`, localUserID, data.Mail, data.Phone, true, true,
+			data.Fname, data.Lname, data.Fullname, data.Username, data.Gender, now, centralToken, data.Picture)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert new user locally: %w", err)
 		}
@@ -208,7 +218,7 @@ func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 				token = $7,
 				avatar_url = $8
 			WHERE id = $9
-		`, res.Data.Phone, res.Data.Fname, res.Data.Lname, res.Data.Fullname, res.Data.Username, res.Data.Gender, centralToken, res.Data.Picture, localUserID)
+		`, data.Phone, data.Fname, data.Lname, data.Fullname, data.Username, data.Gender, centralToken, data.Picture, localUserID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update user locally: %w", err)
 		}
@@ -221,7 +231,8 @@ func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 	}
 
 	// Overwrite token field in response with the local session ID
-	res.Data.Token = sessionToken
+	data.Token = sessionToken
+	res.Data = data
 
 	return &res, nil
 }
@@ -348,10 +359,10 @@ type CompleteRegisterRequest struct {
 }
 
 type CompleteRegisterResponse struct {
-	Status     bool                 `json:"status"`
-	Message    string               `json:"message"`
-	Data       CompleteRegisterData `json:"data"`
-	HttpStatus int                  `json:"http_status"`
+	Status     bool   `json:"status"`
+	Message    string `json:"message"`
+	Data       any    `json:"data"`
+	HttpStatus int    `json:"http_status"`
 }
 
 type CompleteRegisterData struct {
@@ -382,11 +393,21 @@ func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*Comple
 	}
 
 	if !res.Status {
+		// res.Data.Pword = ""
 		return &res, nil
 	}
 
+	dataBytes, err := json.Marshal(res.Data)
+	if err != nil {
+		return nil, err
+	}
+	var data CompleteRegisterData
+	if err := json.Unmarshal(dataBytes, &data); err != nil {
+		return nil, fmt.Errorf("failed to decode registration data: %w", err)
+	}
+
 	// Store central token before we overwrite it
-	centralToken := res.Data.Token
+	centralToken := data.Token
 
 	// 1. Generate local user ID
 	userID := uuid.New()
@@ -398,8 +419,8 @@ func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*Comple
 			id, email, phone_number, is_email_verified, is_phone_verified,
 			first_name, last_name, fullname, username, gender, created_at, token
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-	`, userID, res.Data.Mail, res.Data.Phone, true, true,
-		res.Data.Fname, res.Data.Lname, res.Data.Fullname, res.Data.Username, res.Data.Gender, now, centralToken)
+	`, userID, data.Mail, data.Phone, true, true,
+		data.Fname, data.Lname, data.Fullname, data.Username, data.Gender, now, centralToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save user locally: %w", err)
 	}
@@ -411,7 +432,9 @@ func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*Comple
 	}
 
 	// 4. Overwrite token field in response with the local session ID
-	res.Data.Token = sessionToken
+	data.Token = sessionToken
+	// data.Pword = ""
+	res.Data = data
 
 	return &res, nil
 }

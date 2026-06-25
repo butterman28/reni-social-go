@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"reni-social/internal/types"
 
 	"github.com/gofiber/fiber/v2"
@@ -101,6 +102,7 @@ func SignoutHandler(c *fiber.Ctx) error {
 	}
 
 	if err := Signout(token); err != nil {
+		fmt.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
 			Status:  false,
 			Message: "Could not sign out",
