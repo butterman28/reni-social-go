@@ -22,7 +22,7 @@ func init() {
 	_ = godotenv.Load()
 
 	C = &Config{
-		Port:  "1040",
+		Port:  "1045",
 		IsDev: true,
 
 		// Now pulled from .env!

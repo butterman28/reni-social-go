@@ -5,7 +5,7 @@ package config
 
 func init() {
 	C = &Config{
-		Port:  "1041",
+		Port:  "1046",
 		IsDev: false,
 
 		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_live?sslmode=disable"),
@@ -17,7 +17,7 @@ func init() {
 		RedisHost:     "127.0.0.1",
 		RedisPort:     "6379",
 		RedisPassword: "",
-		RedisDB:       6,
+		RedisDB:       8,
 
 		ReniApiKey:         "",
 		ReniApiBaseUrl:     "",

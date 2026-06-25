@@ -30,7 +30,7 @@ func Setup(app *fiber.App) {
 	// ──────────────────────────────────────────────────────
 	// Authenticated routes
 	// ──────────────────────────────────────────────────────
-	api := app.Group("/api", middleware.AuthMiddleware)
+	api := app.Group("/in", middleware.AuthMiddleware)
 
 	// Auth (session-protected)
 	api.Post("/auth/signout", auth.SignoutHandler)
