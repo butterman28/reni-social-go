@@ -1,30 +1,39 @@
-// cmd/schema/main.go — Database schema synchronization tool.
-//
-// This tool reads YAML schema definitions from the schemas/ directory and
-// applies them to the PostgreSQL database (CREATE TABLE IF NOT EXISTS, ALTER TABLE ADD COLUMN, etc.).
-//
-// Usage:
-//   go run ./cmd/schema
-//   go run -tags=prod ./cmd/schema
-//
-// TODO: Wire up the schema migrator/lock packages once they are ported to reni-social.
-// For now, this binary compiles cleanly as a placeholder.
 package main
 
 import (
 	"log"
 	"os"
-
 	"reni-social/pkg/config"
 	"reni-social/pkg/db"
+	"reni-social/schema/lock"
+	"reni-social/schema/migrator"
 )
 
 func main() {
+	// 1️⃣ Connect to PostgreSQL
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect()
 	defer db.DB.Close()
 
-	log.Println("[Schema] Connected to database.")
-	log.Println("[Schema] Schema migration runner — implementation pending.")
-	log.Println("[Schema] Manually apply schemas from the schemas/ directory using psql or your migration tool.")
+	// 2ï¸ âƒ£ Acquire migration lock (fail if another migration is running)
+	if err := lock.AcquireMigrationLock(db.DB); err != nil {
+		log.Fatalf("[LOCK] Could not acquire migration lock: %v", err)
+	}
+	// // Ensure the lock is released at the end
+	// defer lock.ReleaseMigrationLock(db.DB)
+
+	// Ensure the lock is released even if we crash or get interrupted
+	defer func() {
+		log.Println("[LOCK] Releasing migration lock...")
+		lock.ReleaseMigrationLock(db.DB)
+	}()
+
+	log.Println("[MAIN] Starting schema synchronization...")
+
+	// 3️⃣ Sync public tables first (includes organizations)
+	if err := migrator.SyncPublicTables(db.DB); err != nil {
+		log.Fatal("[SYNC] Failed to sync public tables:", err)
+	}
+
+	log.Println("✅ All schemas are up-to-date")
 }

@@ -1,4 +1,4 @@
-table: platform_connections
+table: linkedin_connections
 columns:
   id:
     type: uuid

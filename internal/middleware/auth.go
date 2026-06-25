@@ -3,8 +3,6 @@ package middleware
 import (
 	"strings"
 
-	"reni-social/internal/utils"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -26,12 +24,6 @@ func AuthMiddleware(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing session token"})
 	}
 
-	userID, err := utils.GetSession(token)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired session"})
-	}
-
-	c.Locals("userid", userID)
 	c.Locals("token", token)
 
 	return c.Next()

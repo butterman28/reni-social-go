@@ -1,0 +1,26 @@
+table: users
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  name:
+    type: varchar(200)
+    not_null: true
+  email:
+    type: varchar(255)
+    unique: true
+  org_id:
+    type: uuid
+    references:
+      table: organizations
+      column: id
+      on_delete: cascade
+
+indexes:
+  - name: users_email_idx
+    columns: [email]
+    unique: true
+  - name: users_org_email_idx
+    columns: [org_id, email]   # <-- composite index
+    unique: false

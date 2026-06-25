@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"strings"
 
 	"reni-social/internal/utils"
@@ -12,28 +13,41 @@ import (
 // It is identical to AuthMiddleware but kept separate so it can be composed
 // into workspace-scoped route groups.
 func UserMiddleware(c *fiber.Ctx) error {
+	// --- 1. Validate Authorization header ---
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing Authorization header"})
+		return c.Status(401).JSON(fiber.Map{"error": "Missing Authorization header"})
 	}
 
-	parts := strings.SplitN(authHeader, " ", 2)
+	// Expect header format: "Bearer <token>"
+	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid Authorization header format"})
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid Authorization header format"})
 	}
+	token := parts[1]
 
-	token := strings.TrimSpace(parts[1])
 	if token == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing session token"})
+		fmt.Println("header error - ", token)
+		return c.Status(400).JSON(fiber.Map{"error": "Missing required headers"})
 	}
 
-	userID, err := utils.GetSession(token)
+	sessionid := c.Get("X-Session-Id")
+	if sessionid == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Missing required headers"})
+	}
+
+	userID, err := utils.GetSession(sessionid)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid or expired session"})
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid or expired session"})
 	}
 
+	fmt.Println("User Session ID Authenticated: ", userID)
+
+	// Store userID in context for later handlers
 	c.Locals("userid", userID)
-	c.Locals("token", token)
 
 	return c.Next()
+
+	// return nil
 }
+

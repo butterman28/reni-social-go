@@ -22,7 +22,9 @@ func Setup(app *fiber.App) {
 	// ──────────────────────────────────────────────────────
 	// Public auth routes (no middleware)
 	// ──────────────────────────────────────────────────────
-	app.Post("/api/auth/signup", auth.SignupHandler)
+	app.Post("/api/auth/register/email", auth.RegisterEmailHandler)
+	app.Post("/api/auth/register/email/activate", auth.ActivateEmailHandler)
+	app.Post("/api/auth/register/complete", auth.CompleteRegisterHandler)
 	app.Post("/api/auth/signin", auth.SigninHandler)
 
 	// ──────────────────────────────────────────────────────

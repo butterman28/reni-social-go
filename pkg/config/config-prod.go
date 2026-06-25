@@ -8,7 +8,7 @@ func init() {
 		Port:  "1041",
 		IsDev: false,
 
-		DBURL: "postgres://reni:CHANGE_ME@127.0.0.1:5432/reni_social?sslmode=disable",
+		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_live?sslmode=disable"),
 
 		USE_TLS:   true,
 		CERT_FILE: "/etc/letsencrypt/live/srv1.fireswitch.ng/fullchain.pem",
@@ -19,9 +19,10 @@ func init() {
 		RedisPassword: "",
 		RedisDB:       6,
 
-		ReniApiKey:     "",
-		ReniApiBaseUrl: "",
-		AppUrl:         "https://srv.fireswitch.ng:1041",
+		ReniApiKey:         "",
+		ReniApiBaseUrl:     "",
+		AppUrl:             "https://srv.fireswitch.ng:1041",
+		ReniCentralService: "https://srv.fireswitch.ng:1030",
 
 		// LinkedIn (prod — set via environment / secrets manager)
 		LinkedInClientID:     "CHANGE_ME",
