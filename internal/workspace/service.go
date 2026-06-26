@@ -21,7 +21,7 @@ type CreateWorkspaceRequest struct {
 }
 
 type InviteMemberRequest struct {
-	Email string              `json:"email"`
+	Email string               `json:"email"`
 	Role  domain.WorkspaceRole `json:"role"`
 }
 
@@ -314,6 +314,8 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error {
 	conn.ID = uuid.New()
 	var err error
+
+	fmt.Println("Refresh Token - ", conn.RefreshToken)
 
 	switch conn.Platform {
 	case domain.PlatformLinkedIn:
