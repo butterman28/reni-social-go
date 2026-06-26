@@ -24,7 +24,7 @@ import (
 
 func main() {
 	redirectURL := config.C.LinkedInRedirectURL
-	state := "manual-test-state"
+	state := ""
 
 	authURL := linkedin.AuthorizationURL(state)
 
