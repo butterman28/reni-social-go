@@ -64,10 +64,14 @@ var _ platform.Publisher = (*Client)(nil)
 
 // AuthorizationURL returns the URL the user should be redirected to for consent.
 func AuthorizationURL(state string, id string, platform string) string {
+	_ = id
+	_ = platform
 	params := url.Values{}
 	params.Set("response_type", "code")
 	params.Set("client_id", config.C.LinkedInClientID)
-	params.Set("redirect_uri", config.C.BackUrl+"/workspaces/in/"+id+"/connect/in/"+platform+"/callback")
+	// params.Set("redirect_uri", config.C.BackUrl+"/workspaces/in/"+id+"/connect/in/"+platform+"/callback")
+	params.Set("redirect_uri", config.C.BackUrl+"/workspaces/connect/linkedin/callback")
+
 	params.Set("state", state)
 	params.Set("scope", "openid profile email w_member_social")
 	return authURL + "?" + params.Encode()

@@ -1,6 +1,8 @@
 package workspace
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -287,6 +289,41 @@ func OAuthCallback(c *fiber.Ctx) error {
 		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Unsupported platform"))
 	}
 
+	if err != nil {
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
+	}
+
+	conn.WorkspaceID = wsUUID
+
+	if err := SaveConnection(c.Context(), conn); err != nil {
+		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
+	}
+
+	// Redirect to frontend success page
+	return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?connected=" + p)
+}
+
+// LinkedIn_OAuthCallback handles GET /api/workspaces/connect/in/linkedin/callback
+func LinkedIn_OAuthCallback(c *fiber.Ctx) error {
+	p := "linkedin"
+	code := c.Query("code")
+	state := c.Query("state")
+
+	// Verify state and extract the workspace ID stored against it
+	wsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
+	if err != nil || wsID == "" {
+		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid or expired OAuth state"))
+	}
+	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
+
+	wsUUID, err := uuid.Parse(wsID)
+	if err != nil {
+		fmt.Println(err)
+		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid workspace ID"))
+	}
+
+	client := linkedin.New()
+	conn, err := client.ExchangeCode(c.Context(), code)
 	if err != nil {
 		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
 	}

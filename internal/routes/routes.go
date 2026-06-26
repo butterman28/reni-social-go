@@ -54,6 +54,7 @@ func Setup(app *fiber.App) {
 	in.Post("/workspaces/in/:id/connect/in/:platform", workspace.ConnectPlatform)
 	in.Get("/workspaces/in/:id/connect/in/:platform/callback", workspace.OAuthCallback)
 	in.Delete("/workspaces/in/:id/connections/:connectionId", workspace.Disconnect)
+	app.Get("/workspaces/connect/linkedin/callback", workspace.LinkedIn_OAuthCallback)
 
 	// Posts
 	in.Post("/posts", post.Create)
