@@ -78,11 +78,11 @@ func AuthorizationURL(state string, id string, platform string) string {
 }
 
 // ExchangeCode exchanges an authorization code for an access token.
-func (c *Client) ExchangeCode(ctx context.Context, code string) (*domain.PlatformConnection, error) {
+func (c *Client) ExchangeCode(ctx context.Context, code, redirectURI string) (*domain.PlatformConnection, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", config.C.LinkedInRedirectURL)
+	data.Set("redirect_uri", redirectURI)
 	data.Set("client_id", config.C.LinkedInClientID)
 	data.Set("client_secret", config.C.LinkedInClientSecret)
 

@@ -75,12 +75,12 @@ func AuthorizationURL(state string, id string, platform string) string {
 // ExchangeCode exchanges an authorization code for a user access token,
 // then exchanges it for a long-lived token, then resolves the correct
 // publishing identity for the requested platform ("meta_fb" or "meta_ig").
-func (c *Client) ExchangeCode(ctx context.Context, code, platformType string) (*domain.PlatformConnection, error) {
+func (c *Client) ExchangeCode(ctx context.Context, code, platformType, redirectURI string) (*domain.PlatformConnection, error) {
 	// Step 1: short-lived user token
 	params := url.Values{}
 	params.Set("client_id", config.C.MetaAppID)
 	params.Set("client_secret", config.C.MetaAppSecret)
-	params.Set("redirect_uri", config.C.MetaRedirectURL)
+	params.Set("redirect_uri", redirectURI)
 	params.Set("code", code)
 
 	resp, err := c.httpClient.Get(tokenURL + "?" + params.Encode())

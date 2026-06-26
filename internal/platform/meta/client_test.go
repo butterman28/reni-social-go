@@ -49,7 +49,7 @@ func TestExchangeCodeFacebook(t *testing.T) {
 	defer func() { tokenURL, graphBase = oldToken, oldGraph }()
 
 	c := New()
-	conn, err := c.ExchangeCode(context.Background(), "fake-code", "meta_fb")
+	conn, err := c.ExchangeCode(context.Background(), "fake-code", "meta_fb", "http://localhost:1045/workspaces/connect/meta_fb/callback")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestExchangeCodeInstagram(t *testing.T) {
 	defer func() { tokenURL, graphBase = oldToken, oldGraph }()
 
 	c := New()
-	conn, err := c.ExchangeCode(context.Background(), "fake-code", "meta_ig")
+	conn, err := c.ExchangeCode(context.Background(), "fake-code", "meta_ig", "http://localhost:1045/workspaces/connect/meta_ig/callback")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestExchangeCodeInstagramNoLinkedAccount(t *testing.T) {
 	defer func() { tokenURL, graphBase = oldToken, oldGraph }()
 
 	c := New()
-	_, err := c.ExchangeCode(context.Background(), "fake-code", "meta_ig")
+	_, err := c.ExchangeCode(context.Background(), "fake-code", "meta_ig", "http://localhost:1045/workspaces/connect/meta_ig/callback")
 	if err == nil {
 		t.Fatal("expected error when no Page has a linked Instagram account, got nil")
 	}

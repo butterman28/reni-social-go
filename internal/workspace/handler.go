@@ -276,10 +276,12 @@ func OAuthCallback(c *fiber.Ctx) error {
 	switch p {
 	case "linkedin":
 		client := linkedin.New()
-		conn, err = client.ExchangeCode(c.Context(), code)
+		redirectURI := config.C.BackUrl + "/workspaces/in/" + wsID + "/connect/in/" + p + "/callback"
+		conn, err = client.ExchangeCode(c.Context(), code, redirectURI)
 	case "meta":
 		client := meta.New()
-		conn, err = client.ExchangeCode(c.Context(), code, "meta_ig")
+		redirectURI := config.C.BackUrl + "/workspaces/in/" + wsID + "/connect/in/" + p + "/callback"
+		conn, err = client.ExchangeCode(c.Context(), code, "meta_ig", redirectURI)
 	case "x":
 		client := xplatform.New()
 		oauthToken := c.Query("oauth_token")
@@ -309,9 +311,13 @@ func LinkedIn_OAuthCallback(c *fiber.Ctx) error {
 	code := c.Query("code")
 	state := c.Query("state")
 
+	fmt.Println("State - ", state)
+	fmt.Println("Code - ", code)
+
 	// Verify state and extract the workspace ID stored against it
 	wsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
 	if err != nil || wsID == "" {
+		fmt.Println(err)
 		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid or expired OAuth state"))
 	}
 	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
@@ -323,14 +329,17 @@ func LinkedIn_OAuthCallback(c *fiber.Ctx) error {
 	}
 
 	client := linkedin.New()
-	conn, err := client.ExchangeCode(c.Context(), code)
+	redirectURI := config.C.BackUrl + "/workspaces/connect/linkedin/callback"
+	conn, err := client.ExchangeCode(c.Context(), code, redirectURI)
 	if err != nil {
+		fmt.Println(err)
 		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
 	}
 
 	conn.WorkspaceID = wsUUID
 
 	if err := SaveConnection(c.Context(), conn); err != nil {
+		fmt.Println(err)
 		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
 	}
 
