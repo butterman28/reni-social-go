@@ -19,43 +19,48 @@ func Setup(app *fiber.App) {
 		return c.JSON(fiber.Map{"status": "healthy"})
 	})
 
+	api := app.Group("/api", middleware.AuthMiddleware)
+
 	// ──────────────────────────────────────────────────────
 	// Public auth routes (no middleware)
 	// ──────────────────────────────────────────────────────
-	app.Post("/api/auth/signup", auth.SignupHandler)
-	app.Post("/api/auth/signin", auth.SigninHandler)
+	api.Post("/auth/register/email", auth.RegisterEmailHandler)
+	api.Post("/auth/register/email/activate", auth.ActivateEmailHandler)
+	api.Post("/auth/register/complete", auth.CompleteRegisterHandler)
+	api.Post("/auth/signin", auth.SigninHandler)
 
 	// ──────────────────────────────────────────────────────
 	// Authenticated routes
 	// ──────────────────────────────────────────────────────
-	api := app.Group("/api", middleware.AuthMiddleware)
+	in := api.Group("/in", middleware.UserMiddleware)
 
 	// Auth (session-protected)
-	api.Post("/auth/signout", auth.SignoutHandler)
-	api.Get("/auth/me", auth.MeHandler)
+	in.Post("/auth/signout", auth.SignoutHandler)
+	in.Get("/auth/me", auth.MeHandler)
 
 	// Workspaces
-	api.Post("/workspaces", workspace.Create)
-	api.Get("/workspaces", workspace.ListMine)
-	api.Get("/workspaces/in/:id", workspace.GetOne)
+	in.Post("/workspaces", workspace.Create)
+	in.Get("/workspaces", workspace.ListMine)
+	in.Get("/workspaces/in/:id", workspace.GetOne)
+	in.Get("/workspaces/in/slug/:slug", workspace.GetOneBySlug)
 
 	// Workspace members
-	api.Post("/workspaces/in/:id/members", workspace.Invite)
-	api.Get("/workspaces/in/:id/members", workspace.Members)
-	api.Delete("/workspaces/in/:id/members/:userId", workspace.RemoveMemberHandler)
+	in.Post("/workspaces/in/:id/members", workspace.Invite)
+	in.Get("/workspaces/in/:id/members", workspace.Members)
+	in.Delete("/workspaces/in/:id/members/in/:userId", workspace.RemoveMemberHandler)
 
 	// Platform connections (OAuth)
-	api.Get("/workspaces/in/:id/connections", workspace.Connections)
-	api.Post("/workspaces/in/:id/connect/:platform", workspace.ConnectPlatform)
-	api.Get("/workspaces/in/:id/connect/:platform/callback", workspace.OAuthCallback)
-	api.Delete("/workspaces/in/:id/connections/:connectionId", workspace.Disconnect)
+	in.Get("/workspaces/in/:id/connections", workspace.Connections)
+	in.Post("/workspaces/in/:id/connect/in/:platform", workspace.ConnectPlatform)
+	in.Get("/workspaces/in/:id/connect/in/:platform/callback", workspace.OAuthCallback)
+	in.Delete("/workspaces/in/:id/connections/:connectionId", workspace.Disconnect)
 
 	// Posts
-	api.Post("/posts", post.Create)
-	api.Get("/posts", post.List)
-	api.Get("/posts/in/:id", post.Get)
-	api.Put("/posts/in/:id", post.Update)
-	api.Delete("/posts/in/:id", post.Delete)
-	api.Post("/posts/in/:id/publish", post.Publish)
-	api.Post("/posts/in/:id/schedule", post.Schedule)
+	in.Post("/posts", post.Create)
+	in.Get("/posts", post.List)
+	in.Get("/posts/in/:id", post.Get)
+	in.Put("/posts/in/:id", post.Update)
+	in.Delete("/posts/in/:id", post.Delete)
+	in.Post("/posts/in/:id/publish", post.Publish)
+	in.Post("/posts/in/:id/schedule", post.Schedule)
 }

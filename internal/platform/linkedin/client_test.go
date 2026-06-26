@@ -21,7 +21,7 @@ func withFakeServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 
 // ── AuthorizationURL ──────────────────────────────────────────────
 func TestAuthorizationURL(t *testing.T) {
-	url := AuthorizationURL("state123")
+	url := AuthorizationURL("state123", "ws-123", "linkedin")
 	if !strings.Contains(url, "state=state123") {
 		t.Errorf("expected state param in URL, got: %s", url)
 	}

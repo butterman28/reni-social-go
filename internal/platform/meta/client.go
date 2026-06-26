@@ -62,10 +62,10 @@ var _ platform.Publisher = (*Client)(nil)
 // ──────────────────────────────────────────────────────────────────────────────
 
 // AuthorizationURL returns the Meta OAuth dialog URL.
-func AuthorizationURL(state string) string {
+func AuthorizationURL(state string, id string, platform string) string {
 	params := url.Values{}
 	params.Set("client_id", config.C.MetaAppID)
-	params.Set("redirect_uri", config.C.MetaRedirectURL)
+	params.Set("redirect_uri", config.C.BackUrl+"/workspaces/in/"+id+"/connect/in/"+platform+"/callback")
 	params.Set("state", state)
 	params.Set("scope", "pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish,public_profile")
 	params.Set("response_type", "code")

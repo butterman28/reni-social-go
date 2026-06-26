@@ -1,14 +1,15 @@
 package auth
 
 import (
+	"fmt"
 	"reni-social/internal/types"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// Signup handles POST /api/auth/signup
-func SignupHandler(c *fiber.Ctx) error {
-	var req SignupRequest
+// RegisterEmailHandler handles POST /api/auth/register/email
+func RegisterEmailHandler(c *fiber.Ctx) error {
+	var req RegisterEmailRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
 			Status:  false,
@@ -16,7 +17,7 @@ func SignupHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	resp, err := Signup(c.Context(), req)
+	resp, err := RegisterEmail(c.Context(), req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
 			Status:  false,
@@ -24,11 +25,49 @@ func SignupHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(types.APIResponse[*AuthResponse]{
-		Status:  true,
-		Message: "Account created successfully",
-		Data:    resp,
-	})
+	return c.Status(resp.HttpStatus).JSON(resp)
+}
+
+// ActivateEmailHandler handles POST /api/auth/register/email/activate
+func ActivateEmailHandler(c *fiber.Ctx) error {
+	var req ActivateEmailRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Invalid request body",
+		})
+	}
+
+	resp, err := ActivateEmail(c.Context(), req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: err.Error(),
+		})
+	}
+
+	return c.Status(resp.HttpStatus).JSON(resp)
+}
+
+// CompleteRegisterHandler handles POST /api/auth/register/complete
+func CompleteRegisterHandler(c *fiber.Ctx) error {
+	var req CompleteRegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Invalid request body",
+		})
+	}
+
+	resp, err := CompleteRegister(c.Context(), req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: err.Error(),
+		})
+	}
+
+	return c.Status(resp.HttpStatus).JSON(resp)
 }
 
 // Signin handles POST /api/auth/signin
@@ -49,11 +88,7 @@ func SigninHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(types.APIResponse[*AuthResponse]{
-		Status:  true,
-		Message: "Signed in successfully",
-		Data:    resp,
-	})
+	return c.Status(resp.HttpStatus).JSON(resp)
 }
 
 // Signout handles POST /api/auth/signout
@@ -67,6 +102,7 @@ func SignoutHandler(c *fiber.Ctx) error {
 	}
 
 	if err := Signout(token); err != nil {
+		fmt.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
 			Status:  false,
 			Message: "Could not sign out",

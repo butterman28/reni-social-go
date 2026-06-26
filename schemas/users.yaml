@@ -27,7 +27,7 @@ columns:
   last_name:
     type: varchar(100)
     not_null: false
-  profile_picture:
+  avatar_url:
     type: varchar(500)
     not_null: false
   created_at:
@@ -38,6 +38,21 @@ columns:
     type: boolean
     not_null: true
     default: false
+  username:
+    type: varchar(100)
+    not_null: false
+  gender:
+    type: varchar(20)
+    not_null: false
+  address:
+    type: varchar(255)
+    not_null: false
+  fullname:
+    type: varchar(200)
+    not_null: false
+  token:
+    type: varchar(255)
+    not_null: false
 
 indexes:
   - name: idx_users_email_unique
@@ -45,4 +60,10 @@ indexes:
     unique: true
   - name: idx_users_phone_unique
     columns: [phone_number]
+    unique: true
+  - name: idx_users_username_unique
+    columns: [username]
+    unique: true
+  - name: idx_users_token_unique
+    columns: [token]
     unique: true

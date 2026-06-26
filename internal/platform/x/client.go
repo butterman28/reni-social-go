@@ -33,7 +33,7 @@ import (
 
 const (
 	requestTokenURL = "https://api.twitter.com/oauth/request_token"
-	xAuthorizeURL = "https://api.twitter.com/oauth/authorize"
+	xAuthorizeURL   = "https://api.twitter.com/oauth/authorize"
 	accessTokenURL  = "https://api.twitter.com/oauth/access_token"
 	tweetsURL       = "https://api.twitter.com/2/tweets"
 	mediaUploadURL  = "https://upload.twitter.com/1.1/media/upload.json"
@@ -60,9 +60,9 @@ var _ platform.Publisher = (*Client)(nil)
 
 // RequestToken fetches a request token and returns (oauthToken, authorizeURL, error).
 // Store oauthToken in Redis keyed by state so the callback can look it up.
-func (c *Client) RequestToken(ctx context.Context) (oauthToken, authorizeURL string, err error) {
+func (c *Client) RequestToken(ctx context.Context, id string, platform string) (oauthToken, authorizeURL string, err error) {
 	header := c.buildOAuth1Header(http.MethodPost, requestTokenURL, url.Values{
-		"oauth_callback": {config.C.XRedirectURL},
+		"oauth_callback": {config.C.BackUrl + "/workspaces/in/" + id + "/connect/in/" + platform + "/callback"},
 	}, config.C.XAPIKey, config.C.XAPISecret, "", "")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestTokenURL, nil)
@@ -252,7 +252,7 @@ func (c *Client) buildOAuth1Header(method, rawURL string, extraParams url.Values
 	for k, vs := range oauthParams {
 		if strings.HasPrefix(k, "oauth_") {
 			for _, v := range vs {
-				headerParts = append(headerParts,k+`="`+url.QueryEscape(v)+`"`)
+				headerParts = append(headerParts, k+`="`+url.QueryEscape(v)+`"`)
 			}
 		}
 	}
@@ -298,13 +298,13 @@ func (c *Client) GetList(ctx context.Context, conn *domain.PlatformConnection, l
 // as X API v2 does not have direct endpoints for these objects.
 func (c *Client) GetTweetWithIncludes(ctx context.Context, conn *domain.PlatformConnection, tweetID string) (map[string]any, error) {
 	params := url.Values{}
-	
+
 	// Expansions tell X to include the full objects for these IDs
 	params.Set("expansions", "attachments.media_keys,attachments.poll_ids,geo.place_id,author_id")
-	
+
 	// Fields for the tweet itself
 	params.Set("tweet.fields", "created_at,author_id,geo,attachments,entities")
-	
+
 	// Fields for the expanded objects (Media, Poll, Place, User)
 	params.Set("media.fields", "media_key,type,url,preview_image_url,alt_text")
 	params.Set("poll.fields", "id,options,voting_status,end_datetime")

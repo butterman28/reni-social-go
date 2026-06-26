@@ -2,8 +2,9 @@
 package config
 
 type Config struct {
-	Port  string
-	IsDev bool
+	Port    string
+	IsDev   bool
+	BackUrl string
 
 	DBURL string
 
@@ -16,10 +17,13 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
+	AppUrl string
+
 	// Legacy fields (kept for backward compat)
-	ReniApiKey     string
-	ReniApiBaseUrl string
-	AppUrl         string
+	ReniApiKey         string
+	ReniApiBaseUrl     string
+	ReniCentralService string
+	ReniCentralKey     string
 
 	// ──────────────────────────────────────────
 	// LinkedIn OAuth2

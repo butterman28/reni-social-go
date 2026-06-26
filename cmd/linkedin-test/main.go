@@ -26,7 +26,7 @@ func main() {
 	redirectURL := config.C.LinkedInRedirectURL
 	state := ""
 
-	authURL := linkedin.AuthorizationURL(state)
+	authURL := linkedin.AuthorizationURL(state, "manual-test-ws-id", "linkedin")
 
 	fmt.Println("=================================================================")
 	fmt.Println("STEP 1: Open this URL in your browser and approve the app:")

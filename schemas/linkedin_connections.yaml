@@ -1,4 +1,4 @@
-table: platform_connections
+table: linkedin_connections
 columns:
   id:
     type: uuid
@@ -6,9 +6,6 @@ columns:
     not_null: true
   workspace_id:
     type: uuid
-    not_null: true
-  platform:
-    type: varchar(50)
     not_null: true
   account_id:
     type: varchar(255)
@@ -31,8 +28,8 @@ columns:
     default: now()
 
 indexes:
-  - name: idx_platform_connections_workspace
+  - name: idx_linkedin_connections_workspace
     columns: [workspace_id]
-  - name: idx_platform_connections_unique
-    columns: [workspace_id, platform, account_id]
+  - name: idx_linkedin_connections_unique
+    columns: [workspace_id, account_id]
     unique: true

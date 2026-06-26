@@ -22,24 +22,27 @@ func init() {
 	_ = godotenv.Load()
 
 	C = &Config{
-		Port:  "1040",
-		IsDev: true,
-		
+		Port:    "1045",
+		IsDev:   true,
+		BackUrl: "localhost:1045",
+
 		// Now pulled from .env!
-		DBURL: getEnv("DBURL", "postgres://reni:reni@127.0.0.1:5432/reni_social_dev?sslmode=disable"),
-		
+		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_dev?sslmode=disable"),
+
 		USE_TLS:   false,
 		CERT_FILE: "/etc/letsencrypt/live/srv1.fireswitch.ng/fullchain.pem",
 		KEY_FILE:  "/etc/letsencrypt/live/srv1.fireswitch.ng/privkey.pem",
-		
+
 		RedisHost:     "127.0.0.1",
 		RedisPort:     "6379",
 		RedisPassword: "",
 		RedisDB:       7,
-		
-		ReniApiKey:     os.Getenv("RENI_API_KEY"),
-		ReniApiBaseUrl: os.Getenv("RENI_API_BASE_URL"),
-		AppUrl:         getEnv("APP_URL", "http://localhost:1040"),
+
+		ReniApiKey:         os.Getenv("RENI_API_KEY"),
+		ReniApiBaseUrl:     os.Getenv("RENI_API_BASE_URL"),
+		AppUrl:             getEnv("APP_URL", "http://localhost:1040"),
+		ReniCentralService: "https://srv.fireswitch.ng:1030",
+		ReniCentralKey:     getEnv("RENI_CENTRAL_KEY", "$newReniCentral"),
 
 		// ──────────────────────────────────────────
 		// LinkedIn (dev) - Now pulled from environment!
@@ -66,6 +69,6 @@ func init() {
 
 		// Media worker
 		MediaWorkerQueue: "social:media_jobs_dev",
-		FFmpegPath:       "ffmpeg", 
+		FFmpegPath:       "ffmpeg",
 	}
 }

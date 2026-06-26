@@ -283,36 +283,95 @@ func adapterFor(p domain.Platform) platform.Publisher {
 }
 
 func loadConnections(ctx context.Context, workspaceID string, platforms []domain.Platform) ([]*domain.PlatformConnection, error) {
-	placeholders := make([]string, len(platforms))
-	args := []any{workspaceID}
-	for i, p := range platforms {
-		placeholders[i] = fmt.Sprintf("$%d", i+2)
-		args = append(args, string(p))
+	if len(platforms) == 0 {
+		return nil, nil
 	}
-
-	query := fmt.Sprintf(`
-		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-		FROM platform_connections
-		WHERE workspace_id=$1 AND platform IN (%s)
-	`, joinStrings(placeholders, ","))
-
-	rows, err := db.DB.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
 	var conns []*domain.PlatformConnection
-	for rows.Next() {
-		c := &domain.PlatformConnection{}
-		err := rows.Scan(&c.ID, &c.WorkspaceID, &c.Platform, &c.AccountID,
-			&c.AccountName, &c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt)
+	hasLinkedIn := false
+	hasMeta := false
+	hasX := false
+
+	for _, p := range platforms {
+		switch p {
+		case domain.PlatformLinkedIn:
+			hasLinkedIn = true
+		case domain.PlatformMetaFB, domain.PlatformMetaIG:
+			hasMeta = true
+		case domain.PlatformX:
+			hasX = true
+		}
+	}
+
+	if hasLinkedIn {
+		rows, err := db.DB.QueryContext(ctx, `
+			SELECT id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at
+			FROM linkedin_connections WHERE workspace_id = $1
+		`, workspaceID)
 		if err != nil {
 			return nil, err
 		}
-		conns = append(conns, c)
+		defer rows.Close()
+		for rows.Next() {
+			c := &domain.PlatformConnection{Platform: domain.PlatformLinkedIn}
+			if err := rows.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt); err != nil {
+				return nil, err
+			}
+			conns = append(conns, c)
+		}
 	}
-	return conns, rows.Err()
+
+	if hasMeta {
+		rows, err := db.DB.QueryContext(ctx, `
+			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+			FROM meta_connections WHERE workspace_id = $1
+		`, workspaceID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			c := &domain.PlatformConnection{}
+			var platformStr string
+			if err := rows.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt); err != nil {
+				return nil, err
+			}
+			c.Platform = domain.Platform(platformStr)
+			// Only include if this platform is in the requested platforms list
+			isRequested := false
+			for _, reqP := range platforms {
+				if reqP == c.Platform {
+					isRequested = true
+					break
+				}
+			}
+			if isRequested {
+				conns = append(conns, c)
+			}
+		}
+	}
+
+	if hasX {
+		rows, err := db.DB.QueryContext(ctx, `
+			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+			FROM x_connections WHERE workspace_id = $1
+		`, workspaceID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			c := &domain.PlatformConnection{}
+			var platformStr string
+			if err := rows.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt); err != nil {
+				return nil, err
+			}
+			c.Platform = domain.Platform(platformStr)
+			conns = append(conns, c)
+		}
+	}
+
+	return conns, nil
 }
 
 func markFailed(ctx context.Context, postID, reason string) error {
