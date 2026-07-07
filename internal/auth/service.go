@@ -342,6 +342,7 @@ func ActivateEmail(ctx context.Context, req ActivateEmailRequest) (*ActivateEmai
 		Timeout: 30 * time.Second,
 	}, &res)
 	if err != nil {
+		fmt.Println("err", err.Error())
 		return nil, fmt.Errorf("activate email call failed: %w", err)
 	}
 	return &res, nil
