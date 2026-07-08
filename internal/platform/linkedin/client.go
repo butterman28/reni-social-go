@@ -67,7 +67,7 @@ func AuthorizationURL(state string, id string, platform string) string {
 	params := url.Values{}
 	params.Set("response_type", "code")
 	params.Set("client_id", config.C.LinkedInClientID)
-	params.Set("redirect_uri", config.C.BackUrl+"/workspaces/in/"+id+"/connect/in/"+platform+"/callback")
+	params.Set("redirect_uri", config.C.LinkedInRedirectURL)
 	params.Set("state", state)
 	params.Set("scope", "openid profile email w_member_social")
 	return authURL + "?" + params.Encode()
@@ -140,15 +140,26 @@ func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnecti
 // For an Article/URL share (a link + preview card, no uploaded media), use
 // PublishArticle directly — domain.Post has no article URL field yet, so it
 // can't be auto-detected here.
+// Publish posts content to LinkedIn via the UGC Posts API.
+//
+// Share type is chosen automatically:
+//   - post.ArticleURL non-empty → Article/URL share (preview card via PublishArticle)
+//   - post.MediaURLs non-empty  → Image or Video share (first URL only)
+//   - otherwise                 → plain Text share
 func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
+	// 1. Article share takes priority — explicit preview-card intent.
+	if post.ArticleURL != "" {
+		return c.PublishArticle(ctx, conn, post.Content, post.ArticleURL, post.ArticleTitle)
+	}
+
+	// 2. Media share (image or video, auto-detected from content type).
 	if len(post.MediaURLs) > 0 {
-		// TODO: only the first media item is published; LinkedIn supports
-		// multi-image carousels via multiple "media" entries if needed later.
 		return c.publishMedia(ctx, post.Content, post.MediaURLs[0], conn)
 	}
+
+	// 3. Plain text share.
 	return c.publishShare(ctx, buildTextShare(conn.AccountID, post.Content), conn.AccessToken)
 }
-
 // PublishArticle creates an Article/URL share: a link with a preview card
 // (title + optional description), as opposed to an uploaded image/video.
 //

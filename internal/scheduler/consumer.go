@@ -120,21 +120,22 @@ func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, er
 	var p domain.Post
 	var mediaJSON, platformJSON []byte
 	var status string
-
 	err := db.QueryRowContext(ctx, `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
+		       article_url, article_title,
 		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
 		FROM posts WHERE id = $1
 	`, postID).Scan(
 		&p.ID, &p.WorkspaceID, &p.AuthorID, &p.Content,
-		&mediaJSON, &platformJSON, &status,
+		&mediaJSON, &platformJSON,
+		&p.ArticleURL, &p.ArticleTitle,
+		&status,
 		&p.ScheduledAt, &p.PublishedAt, &p.FailReason,
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fetch post: %w", err)
 	}
-
 	p.Status = domain.PostStatus(status)
 	_ = json.Unmarshal(mediaJSON, &p.MediaURLs)
 	_ = json.Unmarshal(platformJSON, &p.Platforms)

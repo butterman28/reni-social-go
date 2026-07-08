@@ -307,6 +307,22 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 		}
 	}
 
+	// Query TikTok
+	rowsTT, err := db.DB.QueryContext(ctx, `
+		SELECT id, workspace_id, account_id, account_name, expires_at, created_at
+		FROM tiktok_connections WHERE workspace_id = $1
+	`, workspaceID)
+	if err == nil {
+		defer rowsTT.Close()
+		for rowsTT.Next() {
+			var c domain.PlatformConnection
+			c.Platform = domain.PlatformTikTok
+			if err := rowsTT.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+				conns = append(conns, c)
+			}
+		}
+	}
+
 	return conns, nil
 }
 

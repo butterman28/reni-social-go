@@ -1,10 +1,3 @@
-// cmd/linkedin-test/main.go
-//
-// Standalone manual test for the LinkedIn adapter. Only imports
-// internal/platform/linkedin, internal/domain, pkg/config — never
-// touches the DB, Redis, Fiber routes, or other platforms.
-//
-// Usage: go run ./cmd/linkedin-test
 package main
 
 import (
@@ -13,16 +6,14 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"reni-social/internal/domain"
-	"reni-social/internal/platform"
 	"reni-social/internal/platform/linkedin"
 	"reni-social/pkg/config"
 )
 
-func main() {
+func RunLinkedInTest() {
 	redirectURL := config.C.LinkedInRedirectURL
 	state := ""
 
@@ -97,7 +88,6 @@ func main() {
 		fmt.Printf("   Expires at: %s\n", conn.ExpiresAt.Format(time.RFC1123))
 	}
 
-	// ── STEP 3: Text share ──────────────────────────────────────────
 	if askYesNo("\nSTEP 3: Publish a REAL TEXT post to your LinkedIn feed?") {
 		post := &domain.Post{
 			Content: fmt.Sprintf("Test text post from reni-social — %s", time.Now().Format(time.RFC1123)),
@@ -112,7 +102,6 @@ func main() {
 		fmt.Println("Skipped text share.")
 	}
 
-	// ── STEP 4: Article/URL share ────────────────────────────────────
 	if askYesNo("\nSTEP 4: Publish a REAL ARTICLE/URL share to your LinkedIn feed?") {
 		fmt.Println("Publishing article share (linking to anthropic.com)...")
 		result, err := client.PublishArticle(
@@ -129,11 +118,7 @@ func main() {
 		fmt.Println("Skipped article share.")
 	}
 
-	// ── STEP 5: Image share ──────────────────────────────────────────
 	if askYesNo("\nSTEP 5: Publish a REAL IMAGE post to your LinkedIn feed?") {
-		// httpbin.org/image/png reliably returns a small PNG with the
-		// correct Content-Type header — convenient for a one-off test
-		// without needing to host your own test image.
 		post := &domain.Post{
 			Content:   fmt.Sprintf("Test image post from reni-social — %s", time.Now().Format(time.RFC1123)),
 			MediaURLs: []string{"https://httpbin.org/image/png"},
@@ -149,37 +134,4 @@ func main() {
 	}
 
 	fmt.Println("\nDone.")
-}
-
-func askYesNo(prompt string) bool {
-	fmt.Println(prompt)
-	fmt.Print("Type 'yes' to proceed, anything else to skip: ")
-	var confirm string
-	fmt.Scanln(&confirm)
-	return strings.ToLower(confirm) == "yes"
-}
-
-func printResult(result *platform.PublishResult) { // 👈 CHANGE THIS LINE
-	fmt.Println("✅ Published successfully!")
-	fmt.Printf("   Platform Post ID: %s\n", result.PlatformPostID)
-	if result.URL != "" {
-		fmt.Printf("   URL: %s\n", result.URL)
-	}
-}
-
-func portFromURL(u *url.URL) string {
-	if u.Port() != "" {
-		return u.Port()
-	}
-	if u.Scheme == "https" {
-		return "443"
-	}
-	return "80"
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
 }

@@ -440,7 +440,7 @@ func TestPostJSONSuccess(t *testing.T) {
 	})
 
 	c := New()
-	result, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"})
+	result, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -456,7 +456,7 @@ func TestPostJSONErrorStatus(t *testing.T) {
 	})
 
 	c := New()
-	_, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"})
+	_, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"}, "")
 	if err == nil {
 		t.Fatal("expected error for 400 response, got nil")
 	}

@@ -225,10 +225,11 @@ func ConnectPlatform(c *fiber.Ctx) error {
 	case "linkedin":
 		redirectURL = linkedin.AuthorizationURL(state, wsID, p)
 	case "meta":
-		redirectURL = meta.AuthorizationURL(state, wsID, p)
+		// change to Direct Instagram Login flow (no Facebook Page required).
+		redirectURL = meta.InstagramLoginAuthorizationURL(state)
 	case "x":
 		xClient := xplatform.New()
-		_, authURL, err := xClient.RequestToken(c.Context(), wsID, p)
+		_, authURL, err := xClient.RequestToken(c.Context(), state)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
 				Status:  false,
@@ -277,7 +278,7 @@ func OAuthCallback(c *fiber.Ctx) error {
 		conn, err = client.ExchangeCode(c.Context(), code)
 	case "meta":
 		client := meta.New()
-		conn, err = client.ExchangeCode(c.Context(), code, "meta_ig")
+		    conn, err = client.ExchangeInstagramLoginCode(c.Context(), code) 
 	case "x":
 		client := xplatform.New()
 		oauthToken := c.Query("oauth_token")
