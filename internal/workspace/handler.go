@@ -320,3 +320,201 @@ func Disconnect(c *fiber.Ctx) error {
 		Message: "Platform disconnected",
 	})
 }
+// ──────────────────────────────────────────────────────────────────────────────
+// X (Twitter) — read endpoints
+// ──────────────────────────────────────────────────────────────────────────────
+
+// GetXTweet handles GET /api/workspaces/in/:id/x/tweets/:tweetId
+// Optional query params are passed through as tweet.fields / expansions etc.
+func GetXTweet(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	tweetID := c.Params("tweetId")
+	connectionID := c.Query("connection_id")
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID, connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+
+	data, err := client.GetTweet(c.Context(), conn, tweetID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXTweetWithIncludes handles GET /api/workspaces/in/:id/x/tweets/:tweetId/full
+// Fixed rich-expansion endpoint (media, polls, places, author) — no custom fields needed.
+func GetXTweetWithIncludes(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	tweetID := c.Params("tweetId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID,connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	data, err := client.GetTweetWithIncludes(c.Context(), conn, tweetID)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXUser handles GET /api/workspaces/in/:id/x/users/:userId
+func GetXUser(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	targetUserID := c.Params("userId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID, connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+	if params.Get("user.fields") == "" {
+		params.Set("user.fields", "description,profile_image_url,public_metrics,created_at")
+	}
+
+	data, err := client.GetUser(c.Context(), conn, targetUserID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXSpace handles GET /api/workspaces/in/:id/x/spaces/:spaceId
+func GetXSpace(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	spaceID := c.Params("spaceId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID, connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+	if params.Get("space.fields") == "" {
+		params.Set("space.fields", "title,state,created_at,lang")
+	}
+
+	data, err := client.GetSpace(c.Context(), conn, spaceID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXList handles GET /api/workspaces/in/:id/x/lists/:listId
+func GetXList(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	listID := c.Params("listId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID,connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+	if params.Get("list.fields") == "" {
+		params.Set("list.fields", "name,description,member_count,follower_count")
+	}
+
+	data, err := client.GetList(c.Context(), conn, listID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}

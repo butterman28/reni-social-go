@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
 	"reni-social/internal/domain"
+	"reni-social/internal/types"
 	"reni-social/pkg/db"
 )
 
@@ -390,6 +392,101 @@ func DisconnectPlatform(ctx context.Context, workspaceID, connectionID, callerID
 	_, _ = db.DB.ExecContext(ctx, `DELETE FROM meta_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
 	_, _ = db.DB.ExecContext(ctx, `DELETE FROM x_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
 	return nil
+}
+// GetXConnectionByID fetches a specific X (Twitter) connection for a workspace,
+// scoped by both workspace_id and connection id so one workspace can't reach
+// into another's connection by guessing a UUID.
+func GetXConnectionByID(ctx context.Context, workspaceID, connectionID string) (*domain.PlatformConnection, error) {
+	var c domain.PlatformConnection
+	var platformStr string
+	err := db.DB.QueryRowContext(ctx, `
+		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1 AND id = $2
+	`, workspaceID, connectionID).Scan(
+		&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName,
+		&c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("X connection not found for this workspace")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get x connection: %w", err)
+	}
+	c.Platform = domain.Platform(platformStr)
+	return &c, nil
+}
+
+// GetXConnection fetches an X (Twitter) connection for a workspace.
+// If connectionID is empty, it falls back to the first connected account
+// found (kept for backward compatibility with single-account workspaces).
+// Prefer GetXConnectionByID once the caller knows which account it wants.
+func GetXConnection(ctx context.Context, workspaceID, connectionID string) (*domain.PlatformConnection, error) {
+	if connectionID != "" {
+		return GetXConnectionByID(ctx, workspaceID, connectionID)
+	}
+
+	var c domain.PlatformConnection
+	var platformStr string
+	err := db.DB.QueryRowContext(ctx, `
+		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1
+		ORDER BY created_at ASC
+		LIMIT 1
+	`, workspaceID).Scan(
+		&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName,
+		&c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no X connection found for this workspace")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get x connection: %w", err)
+	}
+	c.Platform = domain.Platform(platformStr)
+	return &c, nil
+}
+
+// ListXConnections handles GET /api/workspaces/in/:id/x/connections
+// Returns all connected X accounts for the workspace (no access tokens).
+func ListXConnections(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	rows, err := db.DB.QueryContext(c.Context(), `
+		SELECT id, account_id, account_name, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1
+		ORDER BY created_at ASC
+	`, wsID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+	defer rows.Close()
+
+	var out []fiber.Map
+	for rows.Next() {
+		var id, accountID, accountName string
+		var expiresAt *time.Time
+		var createdAt time.Time
+		if err := rows.Scan(&id, &accountID, &accountName, &expiresAt, &createdAt); err != nil {
+			continue
+		}
+		out = append(out, fiber.Map{
+			"id": id, "account_id": accountID, "account_name": accountName,
+			"expires_at": expiresAt, "created_at": createdAt,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: out,
+	})
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

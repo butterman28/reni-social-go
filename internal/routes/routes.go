@@ -48,6 +48,14 @@ func Setup(app *fiber.App) {
 	in.Post("/workspaces/in/:id/members", workspace.Invite)
 	in.Get("/workspaces/in/:id/members", workspace.Members)
 	in.Delete("/workspaces/in/:id/members/in/:userId", workspace.RemoveMemberHandler)
+	// X (Twitter) read endpoints
+	in.Get("/workspaces/in/:id/x/connections", workspace.ListXConnections)
+	in.Get("/workspaces/in/:id/x/tweets/in/:tweetId", workspace.GetXTweet)
+	in.Get("/workspaces/in/:id/x/tweets/in/:tweetId/full", workspace.GetXTweetWithIncludes)
+	in.Get("/workspaces/in/:id/x/users/in/:userId", workspace.GetXUser)
+	in.Get("/workspaces/in/:id/x/spaces/in/:spaceId", workspace.GetXSpace)
+	in.Get("/workspaces/in/:id/x/lists/in/:listId", workspace.GetXList)
+	
 
 	// Platform connections (OAuth)
 	in.Get("/workspaces/in/:id/connections", workspace.Connections)
