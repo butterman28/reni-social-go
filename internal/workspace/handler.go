@@ -214,10 +214,14 @@ func ConnectPlatform(c *fiber.Ctx) error {
 	wsID := c.Params("id")
 	p := c.Params("platform")
 
-	// State encodes workspaceID so the callback knows where to save the connection
-	state := wsID + ":" + utils.RandomAlphaNumeric(16)
+	if p != "linkedin" && p != "meta" && p != "x" {
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Unsupported platform: " + p,
+		})
+	}
 
-	// Store state in Redis for 10 minutes to verify in the callback
+	state := wsID + ":" + utils.RandomAlphaNumeric(16)
 	utils.RDB.Set(utils.Ctx, "oauth_state:"+state, wsID, 10*60*1000000000)
 
 	var redirectURL string
@@ -225,7 +229,6 @@ func ConnectPlatform(c *fiber.Ctx) error {
 	case "linkedin":
 		redirectURL = linkedin.AuthorizationURL(state, wsID, p)
 	case "meta":
-		// change to Direct Instagram Login flow (no Facebook Page required).
 		redirectURL = meta.InstagramLoginAuthorizationURL(state)
 	case "x":
 		xClient := xplatform.New()
@@ -237,11 +240,6 @@ func ConnectPlatform(c *fiber.Ctx) error {
 			})
 		}
 		redirectURL = authURL
-	default:
-		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Unsupported platform: " + p,
-		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{

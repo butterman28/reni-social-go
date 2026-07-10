@@ -87,6 +87,11 @@ func RunLinkedInTest() {
 	if conn.ExpiresAt != nil {
 		fmt.Printf("   Expires at: %s\n", conn.ExpiresAt.Format(time.RFC1123))
 	}
+	if conn.RefreshToken != "" {
+		fmt.Printf("   Refresh token (truncated): %s...\n", truncate(conn.RefreshToken, 12))
+	} else {
+		fmt.Println("   Refresh token: <none returned>")
+	}
 
 	if askYesNo("\nSTEP 3: Publish a REAL TEXT post to your LinkedIn feed?") {
 		post := &domain.Post{
