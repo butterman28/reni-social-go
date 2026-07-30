@@ -22,9 +22,9 @@ func init() {
 	_ = godotenv.Load()
 
 	C = &Config{
-		Port:    "1045",
+		Port:    "1040",
 		IsDev:   true,
-		BackUrl: "localhost:1045",
+		BackUrl: "localhost:1040",
 
 		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_dev?sslmode=disable"),
 

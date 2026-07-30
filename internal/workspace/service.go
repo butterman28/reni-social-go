@@ -335,6 +335,7 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 
 	switch conn.Platform {
 	case domain.PlatformLinkedIn:
+		fmt.Printf("🔍 [SaveConnection] Executing LinkedIn INSERT...")
 		_, err = db.DB.ExecContext(ctx, `
 			INSERT INTO linkedin_connections
 			    (id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at)
@@ -347,6 +348,11 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 			    expires_at    = EXCLUDED.expires_at
 		`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
 			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+			if err != nil {
+			fmt.Printf("❌ [SaveConnection] LinkedIn INSERT failed: %v", err)
+			return err
+		}
+		fmt.Printf("✅ [SaveConnection] LinkedIn INSERT succeeded!")
 
 	case domain.PlatformMetaFB, domain.PlatformMetaIG:
 		_, err = db.DB.ExecContext(ctx, `
@@ -391,6 +397,7 @@ func DisconnectPlatform(ctx context.Context, workspaceID, connectionID, callerID
 	_, _ = db.DB.ExecContext(ctx, `DELETE FROM linkedin_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
 	_, _ = db.DB.ExecContext(ctx, `DELETE FROM meta_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
 	_, _ = db.DB.ExecContext(ctx, `DELETE FROM x_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	fmt.Println("🔍 Disconnect debug :",connectionID, workspaceID)
 	return nil
 }
 // GetXConnectionByID fetches a specific X (Twitter) connection for a workspace,

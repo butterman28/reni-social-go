@@ -1,6 +1,8 @@
 package workspace
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -13,6 +15,7 @@ import (
 	"reni-social/internal/types"
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
+	"reni-social/pkg/db"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -208,11 +211,23 @@ func Connections(c *fiber.Ctx) error {
 	})
 }
 
+
 // ConnectPlatform handles POST /api/workspaces/in/:id/connect/:platform
 // Returns the OAuth redirect URL for the frontend to navigate the user to.
 func ConnectPlatform(c *fiber.Ctx) error {
+	// 1. Get the authenticated user ID
+	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
 	p := c.Params("platform")
+
+	// SECURITY FIX: Verify the user has permission to modify this workspace's connections
+	//A malicious but authenticated User A can send a POST request to /api/in/workspaces/in/{Workspace_B_ID}/connect/in/linkedin.
+	if err := requireRole(c.Context(), wsID, userID, domain.RoleAdmin, domain.RoleOwner); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: err.Error(),
+		})
+	}
 
 	if p != "linkedin" && p != "meta" && p != "x" {
 		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
@@ -223,7 +238,7 @@ func ConnectPlatform(c *fiber.Ctx) error {
 
 	state := wsID + ":" + utils.RandomAlphaNumeric(16)
 	utils.RDB.Set(utils.Ctx, "oauth_state:"+state, wsID, 10*60*1000000000)
-
+	
 	var redirectURL string
 	switch p {
 	case "linkedin":
@@ -251,16 +266,28 @@ func ConnectPlatform(c *fiber.Ctx) error {
 
 // OAuthCallback handles GET /api/workspaces/in/:id/connect/:platform/callback
 func OAuthCallback(c *fiber.Ctx) error {
-	wsID := c.Params("id")
 	p := c.Params("platform")
 	code := c.Query("code")
 	state := c.Query("state")
+
+	if state == "" {
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Missing state parameter"))
+	}
+
+	// Extract wsID from state (format: "wsID:randomString")
+	parts := strings.Split(state, ":")
+	if len(parts) < 2 {
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Invalid state format"))
+	}
+	wsID := parts[0]
 
 	// Verify state
 	storedWsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
 	if err != nil || storedWsID != wsID {
 		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid or expired OAuth state"))
 	}
+
+	// Clear the state from Redis
 	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
 
 	wsUUID, err := uuid.Parse(wsID)
@@ -269,19 +296,18 @@ func OAuthCallback(c *fiber.Ctx) error {
 	}
 
 	var conn *domain.PlatformConnection
-
 	switch p {
 	case "linkedin":
 		client := linkedin.New()
-		conn, err = client.ExchangeCode(c.Context(), code)
+		conn, err = client.ExchangeCode(c.UserContext(), code)
 	case "meta":
 		client := meta.New()
-		    conn, err = client.ExchangeInstagramLoginCode(c.Context(), code) 
+		conn, err = client.ExchangeInstagramLoginCode(c.UserContext(), code)
 	case "x":
 		client := xplatform.New()
 		oauthToken := c.Query("oauth_token")
 		oauthVerifier := c.Query("oauth_verifier")
-		conn, err = client.ExchangeVerifier(c.Context(), oauthToken, oauthVerifier)
+		conn, err = client.ExchangeVerifier(c.UserContext(), oauthToken, oauthVerifier)
 	default:
 		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Unsupported platform"))
 	}
@@ -291,15 +317,22 @@ func OAuthCallback(c *fiber.Ctx) error {
 	}
 
 	conn.WorkspaceID = wsUUID
-
-	if err := SaveConnection(c.Context(), conn); err != nil {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
+	
+	// FIX: Use c.UserContext() instead of c.Context()
+	if err := SaveConnection(c.UserContext(), conn); err != nil {
+		return c.Redirect(config.C.AppUrl + "/" + wsID + "/settings?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
 	}
 
-	// Redirect to frontend success page
-	return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?connected=" + p)
-}
+	//FIX: Use QueryRowContext and c.UserContext()
+	var slug string
+	err = db.DB.QueryRowContext(c.UserContext(), `SELECT slug FROM workspaces WHERE id = $1`, wsUUID).Scan(&slug)
+	if err != nil || slug == "" {
+		slug = wsID // Fallback to UUID if slug is somehow missing
+	}
 
+	// Redirect to frontend settings page, accounts tab, with success message
+	return c.Redirect(config.C.AppUrl + "/" + slug + "/settings?tab=accounts&connected=" + p)
+}
 // Disconnect handles DELETE /api/workspaces/in/:id/connections/:connectionId
 func Disconnect(c *fiber.Ctx) error {
 	callerID := c.Locals("userid").(string)

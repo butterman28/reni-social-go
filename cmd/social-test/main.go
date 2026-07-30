@@ -12,6 +12,8 @@
 //	go run ./cmd/social-test -platform=meta
 //	go run ./cmd/social-test -platform=x
 //	go run ./cmd/social-test -platform=tiktok
+//	go run ./cmd/api {to start the service
+//	go run ./cmd/schema {to sync PostgreSQL schema tables and ensure database structure:
 package main
 
 import (
