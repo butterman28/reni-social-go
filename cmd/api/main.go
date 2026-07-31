@@ -32,7 +32,7 @@ func main() {
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
+		AllowOrigins: "http://localhost:5173,http://localhost:5173/,https://renisocial.stories.ng",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Session-ID, timezone, locale, ip",
 	}))
