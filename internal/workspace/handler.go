@@ -213,16 +213,13 @@ func Connections(c *fiber.Ctx) error {
 
 
 // ConnectPlatform handles POST /api/workspaces/in/:id/connect/:platform
-// Returns the OAuth redirect URL for the frontend to navigate the user to.
 func ConnectPlatform(c *fiber.Ctx) error {
-	// 1. Get the authenticated user ID
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
 	p := c.Params("platform")
 
-	// SECURITY FIX: Verify the user has permission to modify this workspace's connections
-	//A malicious but authenticated User A can send a POST request to /api/in/workspaces/in/{Workspace_B_ID}/connect/in/linkedin.
-	if err := requireRole(c.Context(), wsID, userID, domain.RoleAdmin, domain.RoleOwner); err != nil {
+	// 1. Verify the user has permission
+	if err := requireRole(c.UserContext(), wsID, userID, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
 			Status:  false,
 			Message: err.Error(),
@@ -236,6 +233,25 @@ func ConnectPlatform(c *fiber.Ctx) error {
 		})
 	}
 
+	//NEW: Check if an active connection exists, AND revive it if it's soft-deleted but valid
+	hasActive, err := CheckAndReviveConnection(c.UserContext(), wsID, p)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Failed to check existing connections: " + err.Error(),
+		})
+	}
+
+	// If it exists (or was just revived), skip OAuth and tell the frontend
+	if hasActive {
+		return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+			Status:  true,
+			Message: "Already connected",
+			Data:    fiber.Map{"already_connected": true},
+		})
+	}
+
+	// 3. Proceed with normal OAuth flow if no valid connection exists
 	state := wsID + ":" + utils.RandomAlphaNumeric(16)
 	utils.RDB.Set(utils.Ctx, "oauth_state:"+state, wsID, 10*60*1000000000)
 	
@@ -247,7 +263,7 @@ func ConnectPlatform(c *fiber.Ctx) error {
 		redirectURL = meta.InstagramLoginAuthorizationURL(state)
 	case "x":
 		xClient := xplatform.New()
-		_, authURL, err := xClient.RequestToken(c.Context(), state)
+		_, authURL, err := xClient.RequestToken(c.UserContext(), state)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
 				Status:  false,
@@ -269,7 +285,6 @@ func OAuthCallback(c *fiber.Ctx) error {
 	p := c.Params("platform")
 	code := c.Query("code")
 	state := c.Query("state")
-
 	if state == "" {
 		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Missing state parameter"))
 	}
@@ -284,7 +299,7 @@ func OAuthCallback(c *fiber.Ctx) error {
 	// Verify state
 	storedWsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
 	if err != nil || storedWsID != wsID {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid or expired OAuth state"))
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Invalid or expired OAuth state"))
 	}
 
 	// Clear the state from Redis
@@ -292,8 +307,15 @@ func OAuthCallback(c *fiber.Ctx) error {
 
 	wsUUID, err := uuid.Parse(wsID)
 	if err != nil {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid workspace ID"))
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Invalid workspace ID"))
 	}
+
+	var slug string
+	err = db.DB.QueryRowContext(c.UserContext(), `SELECT slug FROM workspaces WHERE id = $1`, wsUUID).Scan(&slug)
+	if err != nil || slug == "" {
+		slug = wsID // Fallback to UUID if slug is somehow missing
+	}
+	redirectBase := config.C.AppUrl + "/" + slug + "/settings"
 
 	var conn *domain.PlatformConnection
 	switch p {
@@ -309,29 +331,22 @@ func OAuthCallback(c *fiber.Ctx) error {
 		oauthVerifier := c.Query("oauth_verifier")
 		conn, err = client.ExchangeVerifier(c.UserContext(), oauthToken, oauthVerifier)
 	default:
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Unsupported platform"))
+		return c.Redirect(redirectBase + "?tab=accounts&error=" + url.QueryEscape("Unsupported platform"))
 	}
 
 	if err != nil {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
+		return c.Redirect(redirectBase + "?tab=accounts&error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
 	}
 
 	conn.WorkspaceID = wsUUID
-	
-	// FIX: Use c.UserContext() instead of c.Context()
-	if err := SaveConnection(c.UserContext(), conn); err != nil {
-		return c.Redirect(config.C.AppUrl + "/" + wsID + "/settings?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
-	}
 
-	//FIX: Use QueryRowContext and c.UserContext()
-	var slug string
-	err = db.DB.QueryRowContext(c.UserContext(), `SELECT slug FROM workspaces WHERE id = $1`, wsUUID).Scan(&slug)
-	if err != nil || slug == "" {
-		slug = wsID // Fallback to UUID if slug is somehow missing
+	// Save the connection (This will now succeed because we fixed the SQL comma!)
+	if err := SaveConnection(c.UserContext(), conn); err != nil {
+		return c.Redirect(redirectBase + "?tab=accounts&error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
 	}
 
 	// Redirect to frontend settings page, accounts tab, with success message
-	return c.Redirect(config.C.AppUrl + "/" + slug + "/settings?tab=accounts&connected=" + p)
+	return c.Redirect(redirectBase + "?tab=accounts&connected=" + p)
 }
 // Disconnect handles DELETE /api/workspaces/in/:id/connections/:connectionId
 func Disconnect(c *fiber.Ctx) error {
