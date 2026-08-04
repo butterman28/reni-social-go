@@ -14,6 +14,8 @@ import (
 	xplatform "reni-social/internal/platform/x"
 	"reni-social/pkg/db"
 
+	"reni-social/internal/scheduler"
+
 	"github.com/google/uuid"
 )
 
@@ -141,7 +143,7 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, error) {
 	query := `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
-		       article_url, article_title,
+		       article_url, article_title, current_publish_attempt_id,
 		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
 		FROM posts
 		WHERE id = $1 AND workspace_id = $2
@@ -166,7 +168,7 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 
 	query := fmt.Sprintf(`
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
-		       article_url, article_title,
+		       article_url, article_title, current_publish_attempt_id,
 		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
 		FROM posts %s
 		ORDER BY created_at DESC
@@ -293,7 +295,6 @@ func PublishNow(ctx context.Context, postID, workspaceID string) error {
 		return fmt.Errorf("post is already published or being published")
 	}
 
-	// Mark as publishing
 	_, err = db.DB.ExecContext(ctx,
 		`UPDATE posts SET status='publishing', updated_at=NOW() WHERE id=$1`, postID)
 	if err != nil {
@@ -305,27 +306,44 @@ func PublishNow(ctx context.Context, postID, workspaceID string) error {
 		_ = markFailed(ctx, postID, err.Error())
 		return err
 	}
-
-	var firstErr error
-	for _, conn := range connections {
-		adapter := adapterFor(conn.Platform)
-		if adapter == nil {
-			continue
-		}
-		if _, pubErr := adapter.Publish(ctx, post, conn); pubErr != nil {
-			firstErr = pubErr
-		}
-	}
-
-	if firstErr != nil {
-		_ = markFailed(ctx, postID, firstErr.Error())
-		return firstErr
-	}
+	attemptID := uuid.New()
 
 	_, err = db.DB.ExecContext(ctx,
-		`UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW() WHERE id=$1`, postID)
-	return err
+		`UPDATE posts SET status='publishing', current_publish_attempt_id=$1, updated_at=NOW() WHERE id=$2`, 
+		attemptID, postID)
+	if err != nil {
+		return err
+	}
+
+		for _, conn := range connections {
+			adapter := adapterFor(conn.Platform)
+			if adapter == nil {
+				continue
+			}
+
+			result, pubErr := adapter.Publish(ctx, post, conn)
+
+			if pubErr != nil {
+			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID, // 👈 PASS attemptID
+				scheduler.ResultFailed, "", "", "", pubErr.Error())
+			continue
+		}
+
+		if result != nil && result.Pending {
+			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID, // 👈 PASS attemptID
+				scheduler.ResultProcessing, "", "", result.ContainerID, "")
+			continue
+		}
+
+		_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID, // 👈 PASS attemptID
+			scheduler.ResultPublished, result.PlatformPostID, result.URL, "", "")
+	}
+
+	// 👇 PASS attemptID to finalizer
+	return scheduler.FinalizePostStatus(ctx, db.DB, postID, attemptID)
 }
+//		return scheduler.FinalizePostStatus(ctx, db.DB, postID)
+//}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Internal helpers
@@ -454,12 +472,17 @@ func scanPostFromScanner(s scannable) (*domain.Post, error) {
 	var p domain.Post
 	var mediaJSON, platformJSON []byte
 	var status string
+	
+	// Use sql.NullString for columns that can be NULL in the DB
+	var articleURL, articleTitle, failReason, attemptIDStr sql.NullString
+
 	err := s.Scan(
 		&p.ID, &p.WorkspaceID, &p.AuthorID, &p.Content,
 		&mediaJSON, &platformJSON,
-		&p.ArticleURL, &p.ArticleTitle,
+		&articleURL, &articleTitle, &attemptIDStr, // <--- 15th argument added here
 		&status,
-		&p.ScheduledAt, &p.PublishedAt, &p.FailReason,
+		&p.ScheduledAt, &p.PublishedAt, 
+		&failReason,              
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -468,8 +491,26 @@ func scanPostFromScanner(s scannable) (*domain.Post, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	// Parse the attempt ID safely
+	if attemptIDStr.Valid {
+		parsed, _ := uuid.Parse(attemptIDStr.String)
+		p.CurrentPublishAttemptID = &parsed
+	}
+
 	p.Status = domain.PostStatus(status)
 	_ = json.Unmarshal(mediaJSON, &p.MediaURLs)
 	_ = json.Unmarshal(platformJSON, &p.Platforms)
+
+	if articleURL.Valid {
+		p.ArticleURL = articleURL.String
+	}
+	if articleTitle.Valid {
+		p.ArticleTitle = articleTitle.String
+	}
+	if failReason.Valid {
+		p.FailReason = failReason.String
+	}
+
 	return &p, nil
 }

@@ -202,10 +202,11 @@ func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, c
 	if len(post.MediaURLs) == 0 {
 		return nil, fmt.Errorf("instagram-login: Instagram requires at least one image or video — text-only posts are not supported by the API")
 	}
-	mediaURL := post.MediaURLs[0]
 
+	mediaURL := post.MediaURLs[0]
 	base := fmt.Sprintf("%s/%s", instagramGraphBase, instagramAPIVersion)
 	containerEndpoint := fmt.Sprintf("%s/%s/media", base, conn.AccountID)
+
 	containerPayload := map[string]any{
 		"caption":      post.Content,
 		"access_token": conn.AccessToken,
@@ -213,7 +214,7 @@ func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, c
 
 	isVideo := isVideoURL(mediaURL)
 	if isVideo {
-		containerPayload["media_type"] = "VIDEO"
+		containerPayload["media_type"] = "REELS"
 		containerPayload["video_url"] = mediaURL
 	} else {
 		containerPayload["image_url"] = mediaURL
@@ -223,17 +224,23 @@ func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, c
 	if err != nil {
 		return nil, fmt.Errorf("instagram-login: create container: %w", err)
 	}
+
 	containerID, ok := containerResp["id"].(string)
 	if !ok || containerID == "" {
 		return nil, fmt.Errorf("instagram-login: no container id returned")
 	}
 
+	// ── KEY CHANGE ──
+	// Videos: don't wait. Return pending + container_id.
+	// The IG Container Finalizer worker will poll and publish later.
 	if isVideo {
-		if err := c.waitForInstagramLoginContainerReady(ctx, base, containerID, conn.AccessToken); err != nil {
-			return nil, fmt.Errorf("instagram-login: %w", err)
-		}
+		return &platform.PublishResult{
+			Pending:     true,
+			ContainerID: containerID,
+		}, nil
 	}
 
+	// Images: near-instant processing, publish immediately.
 	publishEndpoint := fmt.Sprintf("%s/%s/media_publish", base, conn.AccountID)
 	publishResp, err := c.postJSON(ctx, publishEndpoint, map[string]any{
 		"creation_id":  containerID,
@@ -246,7 +253,6 @@ func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, c
 	postID, _ := publishResp["id"].(string)
 	return &platform.PublishResult{PlatformPostID: postID}, nil
 }
-
 // waitForInstagramLoginContainerReady polls a media container's processing
 // status until FINISHED, errors out, or times out (60s, every 3s).
 func (c *Client) waitForInstagramLoginContainerReady(ctx context.Context, base, containerID, accessToken string) error {

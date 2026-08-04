@@ -301,53 +301,53 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	var conns []domain.PlatformConnection
 
-	// Query LinkedIn (Ignore soft-deleted)
+	// Query LinkedIn (Removed is_deleted filter so frontend can see disconnected accounts)
 	rowsLI, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, account_id, account_name, expires_at, created_at
+		SELECT id, workspace_id, account_id, account_name, expires_at, created_at, is_deleted 
 		FROM linkedin_connections 
-		WHERE workspace_id = $1 AND (is_deleted = false OR is_deleted IS NULL)
+		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsLI.Close()
 		for rowsLI.Next() {
 			var c domain.PlatformConnection
 			c.Platform = domain.PlatformLinkedIn
-			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
 				conns = append(conns, c)
 			}
 		}
 	}
 
-	// Query Meta (Ignore soft-deleted)
+	// Query Meta
 	rowsMeta, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at, is_deleted
 		FROM meta_connections 
-		WHERE workspace_id = $1 AND (is_deleted = false OR is_deleted IS NULL)
+		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsMeta.Close()
 		for rowsMeta.Next() {
 			var c domain.PlatformConnection
 			var platformStr string
-			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
 				c.Platform = domain.Platform(platformStr)
 				conns = append(conns, c)
 			}
 		}
 	}
 
-	// Query X (Ignore soft-deleted)
+	// Query X
 	rowsX, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at, is_deleted
 		FROM x_connections 
-		WHERE workspace_id = $1 AND (is_deleted = false OR is_deleted IS NULL)
+		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsX.Close()
 		for rowsX.Next() {
 			var c domain.PlatformConnection
 			var platformStr string
-			if err := rowsX.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+			if err := rowsX.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
 				c.Platform = domain.Platform(platformStr)
 				conns = append(conns, c)
 			}

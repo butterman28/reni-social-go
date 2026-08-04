@@ -1,14 +1,16 @@
 // Package scheduler implements the two-stage post dispatch engine.
 //
 // Stage 1 — DB Poller (this file):
-//   Every N seconds, query for posts where status='scheduled' AND scheduled_at <= NOW().
-//   For each due post, atomically transition it to status='publishing' and push
-//   its ID onto the Redis list queue. This decouples discovery from execution
-//   and prevents double-publish on worker restart.
+//
+//	Every N seconds, query for posts where status='scheduled' AND scheduled_at <= NOW().
+//	For each due post, atomically transition it to status='publishing' and push
+//	its ID onto the Redis list queue. This decouples discovery from execution
+//	and prevents double-publish on worker restart.
 //
 // Stage 2 — Queue Consumer (consumer.go):
-//   Blocks on BRPOP from the Redis queue, fetches the full post, fans out to
-//   platform adapters concurrently, and updates the post status.
+//
+//	Blocks on BRPOP from the Redis queue, fetches the full post, fans out to
+//	platform adapters concurrently, and updates the post status.
 package scheduler
 
 import (
@@ -51,13 +53,15 @@ func pollAndEnqueue(db *sql.DB) error {
 		WITH due AS (
 			SELECT id FROM posts
 			WHERE status = 'scheduled'
-			  AND scheduled_at <= NOW()
+			AND scheduled_at <= NOW()
 			FOR UPDATE SKIP LOCKED
 		)
 		UPDATE posts
-		   SET status = 'publishing', updated_at = NOW()
-		  FROM due
-		 WHERE posts.id = due.id
+		SET status = 'publishing', 
+			updated_at = NOW(),
+			current_publish_attempt_id = gen_random_uuid() -- 👈 GENERATE IT HERE
+		FROM due
+		WHERE posts.id = due.id
 		RETURNING posts.id::text
 	`
 

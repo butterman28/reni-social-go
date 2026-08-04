@@ -77,5 +77,7 @@ func init() {
 		// Media worker
 		MediaWorkerQueue: "social:media_jobs_dev",
 		FFmpegPath:       "ffmpeg",
+		// notifications 
+		NotifyQueue: "social:notify_queue_dev",
 	}
 }

@@ -73,6 +73,10 @@ type Config struct {
 	// ──────────────────────────────────────────
 	MediaWorkerQueue string // Redis key, e.g. "social:media_jobs"
 	FFmpegPath       string // e.g. "/usr/bin/ffmpeg"
+	// ──────────────────────────────────────────
+	// Notifications (email/SMS)
+	// ──────────────────────────────────────────
+	NotifyQueue string
 }
 
 var C *Config

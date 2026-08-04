@@ -1,0 +1,51 @@
+table: publish_results
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  post_id:
+    type: uuid
+    not_null: true
+  platform:
+    type: varchar(50)
+    not_null: true
+  status:
+    type: varchar(50)
+    not_null: true
+    default: "'pending'"
+  platform_post_id:
+    type: varchar(255)
+    not_null: false
+  platform_post_url:
+    type: varchar(2000)
+    not_null: false
+  container_id:
+    type: varchar(255)
+    not_null: false
+  fail_reason:
+    type: text
+    not_null: false
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+  updated_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+  publish_attempt_id:
+    type: uuid
+    not_null: true
+    default: "gen_random_uuid()"   
+  connection_id:
+    type: uuid
+    not_null: false
+
+indexes:
+  - name: idx_publish_results_post_id
+    columns: [post_id]
+  - name: idx_publish_results_platform_status
+    columns: [platform, status]
+  - name: idx_publish_results_attempt
+    columns: [post_id, publish_attempt_id]

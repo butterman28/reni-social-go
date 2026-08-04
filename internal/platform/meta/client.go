@@ -246,7 +246,7 @@ func (c *Client) publishInstagram(ctx context.Context, post *domain.Post, conn *
 
 	isVideo := isVideoURL(mediaURL)
 	if isVideo {
-		containerPayload["media_type"] = "VIDEO"
+		containerPayload["media_type"] = "REELS"
 		containerPayload["video_url"] = mediaURL
 	} else {
 		containerPayload["image_url"] = mediaURL

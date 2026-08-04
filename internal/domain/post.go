@@ -45,4 +45,5 @@ type Post struct {
 	FailReason  string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	CurrentPublishAttemptID *uuid.UUID //`json:"current_publish_attempt_id"`
 }

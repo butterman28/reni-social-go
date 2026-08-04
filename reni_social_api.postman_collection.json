@@ -1,0 +1,1281 @@
+{
+  "info": {
+    "name": "Reni Social API",
+    "description": "Auto-generated Postman Collection for Reni Social Go Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "[GET] /health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/health",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/workspaces/connect/:platform/callback",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/workspaces/connect/:platform/callback",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "workspaces",
+            "connect",
+            "{{platform}}",
+            "callback"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/auth/me",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/auth/me",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "auth",
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/slug/:slug",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/slug/:slug",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "slug",
+            "{{slug}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/members",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/members",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "members"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/x/connections",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/connections",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "x",
+            "connections"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/x/tweets/in/:tweetId",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/tweets/in/:tweetId",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "x",
+            "tweets",
+            "in",
+            "{{tweetId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/x/tweets/in/:tweetId/full",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/tweets/in/:tweetId/full",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "x",
+            "tweets",
+            "in",
+            "{{tweetId}}",
+            "full"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/x/users/in/:userId",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/users/in/:userId",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "x",
+            "users",
+            "in",
+            "{{userId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/x/spaces/in/:spaceId",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/spaces/in/:spaceId",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "x",
+            "spaces",
+            "in",
+            "{{spaceId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/x/lists/in/:listId",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/lists/in/:listId",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "x",
+            "lists",
+            "in",
+            "{{listId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/workspaces/in/:id/connections",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/connections",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "connections"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/posts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/posts/in/:id",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts",
+            "in",
+            "{{id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[GET] /api/in/posts/in/:id/results",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id/results",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts",
+            "in",
+            "{{id}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/auth/register/email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/auth/register/email",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register",
+            "email"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/auth/register/email/activate",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/auth/register/email/activate",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register",
+            "email",
+            "activate"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/auth/register/complete",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/auth/register/complete",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "register",
+            "complete"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/auth/signin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/auth/signin",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signin"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/auth/signout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/auth/signout",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "auth",
+            "signout"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/workspaces",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/workspaces/in/:id/members",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/members",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "members"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/workspaces/in/:id/connect/in/:platform",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/connect/in/:platform",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "connect",
+            "in",
+            "{{platform}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/posts",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/posts/in/:id/publish",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id/publish",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts",
+            "in",
+            "{{id}}",
+            "publish"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[POST] /api/in/posts/in/:id/schedule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id/schedule",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts",
+            "in",
+            "{{id}}",
+            "schedule"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[PUT] /api/in/posts/in/:id",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts",
+            "in",
+            "{{id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[DELETE] /api/in/workspaces/in/:id/members/in/:userId",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/members/in/:userId",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "members",
+            "in",
+            "{{userId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[DELETE] /api/in/workspaces/in/:id/connections/:connectionId",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/connections/:connectionId",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "workspaces",
+            "in",
+            "{{id}}",
+            "connections",
+            "{{connectionId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[DELETE] /api/in/posts/in/:id",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "ngrok-skip-browser-warning",
+            "value": "true",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-Session-Id",
+            "value": "{{session_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id",
+          "host": [
+            "http://127.0.0.1:1040"
+          ],
+          "path": [
+            "api",
+            "in",
+            "posts",
+            "in",
+            "{{id}}"
+          ]
+        }
+      }
+    }
+  ]
+}

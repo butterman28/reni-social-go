@@ -1,11 +1,13 @@
 package post
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 
 	"reni-social/internal/domain"
+	"reni-social/pkg/db"
 )
 
 // Create handles POST /api/posts
@@ -134,4 +136,68 @@ func Schedule(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "post scheduled", "scheduled_at": body.ScheduledAt})
+}
+
+// Results handles GET /api/posts/in/:id/results
+// Returns per-platform publish status for the frontend to display.
+func Results(c *fiber.Ctx) error {
+	postID := c.Params("id")
+
+	// 1. Fetch the current attempt ID for this post
+	var attemptIDStr sql.NullString
+	err := db.DB.QueryRowContext(c.Context(), `SELECT current_publish_attempt_id FROM posts WHERE id=$1`, postID).Scan(&attemptIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// 2. Build query to ONLY fetch rows from the current attempt
+	query := `
+		SELECT id::text, platform, status, platform_post_id, platform_post_url,
+		       container_id, fail_reason, created_at, updated_at
+		FROM publish_results
+		WHERE post_id = $1
+	`
+	args := []any{postID}
+
+	if attemptIDStr.Valid {
+		query += ` AND publish_attempt_id = $2`
+		args = append(args, attemptIDStr.String)
+	}
+	query += ` ORDER BY created_at ASC`
+
+	rows, err := db.DB.QueryContext(c.Context(), query, args...)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer rows.Close()
+
+	// ... (keep your existing resultRow struct and scanning loop exactly the same) ...
+
+	type resultRow struct {
+		ID             string    `json:"id"`
+		Platform       string    `json:"platform"`
+		Status         string    `json:"status"`
+		PlatformPostID string    `json:"platform_post_id"`
+		PlatformURL    string    `json:"platform_post_url"`
+		ContainerID    string    `json:"container_id"`
+		FailReason     string    `json:"fail_reason"`
+		CreatedAt      time.Time `json:"created_at"`
+		UpdatedAt      time.Time `json:"updated_at"`
+	}
+
+	var results []resultRow
+	for rows.Next() {
+		var r resultRow
+		if err := rows.Scan(
+			&r.ID, &r.Platform, &r.Status,
+			&r.PlatformPostID, &r.PlatformURL,
+			&r.ContainerID, &r.FailReason,
+			&r.CreatedAt, &r.UpdatedAt,
+		); err != nil {
+			continue
+		}
+		results = append(results, r)
+	}
+
+	return c.JSON(fiber.Map{"results": results})
 }

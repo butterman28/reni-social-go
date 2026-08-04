@@ -64,4 +64,5 @@ func Setup(app *fiber.App) {
 	in.Delete("/posts/in/:id", post.Delete)
 	in.Post("/posts/in/:id/publish", post.Publish)
 	in.Post("/posts/in/:id/schedule", post.Schedule)
+	in.Get("/posts/in/:id/results", post.Results)   
 }

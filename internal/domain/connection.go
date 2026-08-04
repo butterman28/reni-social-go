@@ -18,4 +18,5 @@ type PlatformConnection struct {
 	RefreshToken string // encrypted before DB write
 	ExpiresAt    *time.Time
 	CreatedAt    time.Time
+	IsDeleted    bool 
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"reni-social/internal/media"
+	"reni-social/internal/notify"
 	"reni-social/internal/scheduler"
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
@@ -15,19 +16,17 @@ import (
 )
 
 func main() {
-	// 1. Initialize global connections
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect()
 	utils.InitRedis()
 
-	// 2. Start workers — each runs under a supervisor that auto-restarts on panic/exit
 	go supervise(scheduler.StartPoller, "Post Scheduler Poller")
 	go supervise(scheduler.StartConsumer, "Post Queue Consumer")
+	go supervise(scheduler.StartIGContainerFinalizer, "IG Container Finalizer") // ← NEW
 	go supervise(media.StartMediaWorker, "Media Processing Worker")
+	go supervise(func(*sql.DB) { notify.StartNotifyWorker() }, "Notification Worker")
 
 	fmt.Println("🚀 Reni Social Worker is running...")
-
-	// 3. Block forever — workers run in goroutines above
 	select {}
 }
 
