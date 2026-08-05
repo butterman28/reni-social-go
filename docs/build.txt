@@ -15,3 +15,13 @@ $env:GOARCH="amd64"
 or 
 
 $env:GOOS="linux"; $env:GOARCH="amd64";
+
+# Docker build (uses config-docker.go + redis_client_docker.go)
+go build -tags=docker ./cmd/api ./cmd/worker ./cmd/schema
+
+# Local dev build (uses config-dev.go + redis_client.go — unchanged behavior)
+go build ./cmd/api
+
+# Launch the stack
+docker compose up --build -d
+curl http://localhost:1040/health   # → {"status":"healthy"}

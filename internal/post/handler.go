@@ -1,7 +1,6 @@
 package post
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -107,12 +106,18 @@ func Publish(c *fiber.Ctx) error {
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
-
-	if err := PublishNow(c.Context(), postID, workspaceID); err != nil {
+	
+	// Call the updated service that returns the attemptID
+	attemptID, err := PublishNow(c.Context(), postID, workspaceID)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	return c.JSON(fiber.Map{"message": "post published"})
+	
+	//Tell the frontend to start tracking this specific attempt
+	return c.JSON(fiber.Map{
+		"message":    "publishing_initiated",
+		"attempt_id": attemptID,
+	})
 }
 
 // Schedule handles POST /api/posts/:id/schedule
@@ -142,15 +147,8 @@ func Schedule(c *fiber.Ctx) error {
 // Returns per-platform publish status for the frontend to display.
 func Results(c *fiber.Ctx) error {
 	postID := c.Params("id")
+	attemptID := c.Query("attempt_id") // Grab the tracking ID from the URL
 
-	// 1. Fetch the current attempt ID for this post
-	var attemptIDStr sql.NullString
-	err := db.DB.QueryRowContext(c.Context(), `SELECT current_publish_attempt_id FROM posts WHERE id=$1`, postID).Scan(&attemptIDStr)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	// 2. Build query to ONLY fetch rows from the current attempt
 	query := `
 		SELECT id::text, platform, status, platform_post_id, platform_post_url,
 		       container_id, fail_reason, created_at, updated_at
@@ -159,19 +157,18 @@ func Results(c *fiber.Ctx) error {
 	`
 	args := []any{postID}
 
-	if attemptIDStr.Valid {
-		query += ` AND publish_attempt_id = $2`
-		args = append(args, attemptIDStr.String)
+	//if the frontend passes the attempt_id, ONLY return rows from this specific click
+	if attemptID != "" {
+		query += " AND publish_attempt_id = $2"
+		args = append(args, attemptID)
 	}
-	query += ` ORDER BY created_at ASC`
+	query += " ORDER BY created_at ASC"
 
 	rows, err := db.DB.QueryContext(c.Context(), query, args...)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	defer rows.Close()
-
-	// ... (keep your existing resultRow struct and scanning loop exactly the same) ...
 
 	type resultRow struct {
 		ID             string    `json:"id"`

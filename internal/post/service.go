@@ -286,65 +286,64 @@ func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt t
 
 // PublishNow immediately dispatches a post to all its platforms.
 // This is called directly from the HTTP handler, bypassing the scheduler queue.
-func PublishNow(ctx context.Context, postID, workspaceID string) error {
+func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, error) {
 	post, err := GetPost(ctx, postID, workspaceID)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 	if post.Status == domain.StatusPublished || post.Status == domain.StatusPublishing {
-		return fmt.Errorf("post is already published or being published")
+		return uuid.Nil, fmt.Errorf("post is already published or being published")
 	}
 
+	//1. Generate the Idempotency Key for this specific button click
+	attemptID := uuid.New()
+
 	_, err = db.DB.ExecContext(ctx,
-		`UPDATE posts SET status='publishing', updated_at=NOW() WHERE id=$1`, postID)
+		`UPDATE posts SET status='publishing', current_publish_attempt_id=$1, updated_at=NOW() WHERE id=$2`,
+		attemptID, postID)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	connections, err := loadConnections(ctx, workspaceID, post.Platforms)
 	if err != nil {
 		_ = markFailed(ctx, postID, err.Error())
-		return err
-	}
-	attemptID := uuid.New()
-
-	_, err = db.DB.ExecContext(ctx,
-		`UPDATE posts SET status='publishing', current_publish_attempt_id=$1, updated_at=NOW() WHERE id=$2`, 
-		attemptID, postID)
-	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-		for _, conn := range connections {
-			adapter := adapterFor(conn.Platform)
-			if adapter == nil {
-				continue
-			}
+	//2. Fan out to platforms and log the immediate results
+	for _, conn := range connections {
+		adapter := adapterFor(conn.Platform)
+		if adapter == nil {
+			continue
+		}
 
-			result, pubErr := adapter.Publish(ctx, post, conn)
+		result, pubErr := adapter.Publish(ctx, post, conn)
 
-			if pubErr != nil {
-			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID, // 👈 PASS attemptID
+		if pubErr != nil {
+			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID,
 				scheduler.ResultFailed, "", "", "", pubErr.Error())
 			continue
 		}
 
 		if result != nil && result.Pending {
-			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID, // 👈 PASS attemptID
+			// Instagram video: save as processing, the Finalizer worker will finish it
+			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID,
 				scheduler.ResultProcessing, "", "", result.ContainerID, "")
 			continue
 		}
 
-		_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID, // 👈 PASS attemptID
+		// LinkedIn/X: Synchronous success
+		_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID,
 			scheduler.ResultPublished, result.PlatformPostID, result.URL, "", "")
 	}
 
-	// 👇 PASS attemptID to finalizer
-	return scheduler.FinalizePostStatus(ctx, db.DB, postID, attemptID)
+	//3. Let the shared finalizer check if everything is done, or if we are still waiting on async
+	_ = scheduler.FinalizePostStatus(ctx, db.DB, postID, attemptID)
+
+	return attemptID, nil
 }
 //		return scheduler.FinalizePostStatus(ctx, db.DB, postID)
-//}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ──────────────────────────────────────────────────────────────────────────────
