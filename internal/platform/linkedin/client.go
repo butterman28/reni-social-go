@@ -64,8 +64,6 @@ var _ platform.Publisher = (*Client)(nil)
 
 // AuthorizationURL returns the URL the user should be redirected to for consent.
 func AuthorizationURL(state string, id string, platform string) string {
-	_ = id
-	_ = platform
 	params := url.Values{}
 	params.Set("response_type", "code")
 	params.Set("client_id", config.C.LinkedInClientID)
@@ -76,11 +74,11 @@ func AuthorizationURL(state string, id string, platform string) string {
 }
 
 // ExchangeCode exchanges an authorization code for an access token.
-func (c *Client) ExchangeCode(ctx context.Context, code, redirectURI string) (*domain.PlatformConnection, error) {
+func (c *Client) ExchangeCode(ctx context.Context, code string) (*domain.PlatformConnection, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", redirectURI)
+	data.Set("redirect_uri", config.C.LinkedInRedirectURL)
 	data.Set("client_id", config.C.LinkedInClientID)
 	data.Set("client_secret", config.C.LinkedInClientSecret)
 

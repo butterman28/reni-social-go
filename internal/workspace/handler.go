@@ -1,11 +1,7 @@
 package workspace
 
 import (
-<<<<<<< HEAD
 	"strings"
-=======
-	"fmt"
->>>>>>> origin/main
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -325,19 +321,10 @@ func OAuthCallback(c *fiber.Ctx) error {
 	switch p {
 	case "linkedin":
 		client := linkedin.New()
-<<<<<<< HEAD
 		conn, err = client.ExchangeCode(c.UserContext(), code)
 	case "meta":
 		client := meta.New()
 		conn, err = client.ExchangeInstagramLoginCode(c.UserContext(), code)
-=======
-		redirectURI := config.C.BackUrl + "/workspaces/in/" + wsID + "/connect/in/" + p + "/callback"
-		conn, err = client.ExchangeCode(c.Context(), code, redirectURI)
-	case "meta":
-		client := meta.New()
-		redirectURI := config.C.BackUrl + "/workspaces/in/" + wsID + "/connect/in/" + p + "/callback"
-		conn, err = client.ExchangeCode(c.Context(), code, "meta_ig", redirectURI)
->>>>>>> origin/main
 	case "x":
 		client := xplatform.New()
 		oauthToken := c.Query("oauth_token")
@@ -361,52 +348,6 @@ func OAuthCallback(c *fiber.Ctx) error {
 	// Redirect to frontend settings page, accounts tab, with success message
 	return c.Redirect(redirectBase + "?tab=accounts&connected=" + p)
 }
-<<<<<<< HEAD
-=======
-
-// LinkedIn_OAuthCallback handles GET /api/workspaces/connect/in/linkedin/callback
-func LinkedIn_OAuthCallback(c *fiber.Ctx) error {
-	p := "linkedin"
-	code := c.Query("code")
-	state := c.Query("state")
-
-	fmt.Println("State - ", state)
-	fmt.Println("Code - ", code)
-
-	// Verify state and extract the workspace ID stored against it
-	wsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
-	if err != nil || wsID == "" {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid or expired OAuth state"))
-	}
-	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
-
-	wsUUID, err := uuid.Parse(wsID)
-	if err != nil {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid workspace ID"))
-	}
-
-	client := linkedin.New()
-	redirectURI := config.C.BackUrl + "/workspaces/connect/linkedin/callback"
-	conn, err := client.ExchangeCode(c.Context(), code, redirectURI)
-	if err != nil {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
-	}
-
-	conn.WorkspaceID = wsUUID
-
-	if err := SaveConnection(c.Context(), conn); err != nil {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
-	}
-
-	// Redirect to frontend success page
-	return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?connected=" + p)
-}
-
->>>>>>> origin/main
 // Disconnect handles DELETE /api/workspaces/in/:id/connections/:connectionId
 func Disconnect(c *fiber.Ctx) error {
 	callerID := c.Locals("userid").(string)
