@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
 	"reni-social/internal/domain"
+	"reni-social/internal/types"
 	"reni-social/pkg/db"
 )
 
@@ -248,7 +250,49 @@ func RemoveMember(ctx context.Context, workspaceID, callerID, targetUserID strin
 // ──────────────────────────────────────────────────────────────────────────────
 // Platform Connections
 // ──────────────────────────────────────────────────────────────────────────────
+// CheckAndReviveConnection checks if a non-expired connection exists.
+// If it exists but is soft-deleted, it automatically revives it (sets is_deleted = false).
+// Returns true if an active connection is available (skipping OAuth), false otherwise.
+func CheckAndReviveConnection(ctx context.Context, workspaceID string, platform string) (bool, error) {
+	var query, updateQuery string
 
+	switch platform {
+	case "linkedin":
+		query = `SELECT is_deleted FROM linkedin_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
+		updateQuery = `UPDATE linkedin_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
+	case "meta":
+		query = `SELECT is_deleted FROM meta_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
+		updateQuery = `UPDATE meta_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
+	case "x":
+		query = `SELECT is_deleted FROM x_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
+		updateQuery = `UPDATE x_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
+	default:
+		return false, fmt.Errorf("unsupported platform: %s", platform)
+	}
+
+	var isDeleted bool
+	err := db.DB.QueryRowContext(ctx, query, workspaceID).Scan(&isDeleted)
+	
+	if err == sql.ErrNoRows {
+		// No connection exists, or it has expired. Must go through OAuth.
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Connection exists and is NOT expired.
+	// If it was soft-deleted, revive it now!
+	if isDeleted {
+		_, err = db.DB.ExecContext(ctx, updateQuery, workspaceID)
+		if err != nil {
+			return false, fmt.Errorf("failed to revive connection: %w", err)
+		}
+	}
+
+	// It's active (or just got revived). Skip OAuth.
+	return true, nil
+}
 // ListConnections returns all connected social platforms for a workspace.
 func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.PlatformConnection, error) {
 	if err := requireRole(ctx, workspaceID, userID, domain.RoleMember, domain.RoleAdmin, domain.RoleOwner); err != nil {
@@ -257,17 +301,18 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	var conns []domain.PlatformConnection
 
-	// Query LinkedIn
+	// Query LinkedIn (Removed is_deleted filter so frontend can see disconnected accounts)
 	rowsLI, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, account_id, account_name, expires_at, created_at
-		FROM linkedin_connections WHERE workspace_id = $1
+		SELECT id, workspace_id, account_id, account_name, expires_at, created_at, is_deleted 
+		FROM linkedin_connections 
+		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsLI.Close()
 		for rowsLI.Next() {
 			var c domain.PlatformConnection
 			c.Platform = domain.PlatformLinkedIn
-			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
 				conns = append(conns, c)
 			}
 		}
@@ -275,15 +320,16 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	// Query Meta
 	rowsMeta, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
-		FROM meta_connections WHERE workspace_id = $1
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at, is_deleted
+		FROM meta_connections 
+		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsMeta.Close()
 		for rowsMeta.Next() {
 			var c domain.PlatformConnection
 			var platformStr string
-			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
 				c.Platform = domain.Platform(platformStr)
 				conns = append(conns, c)
 			}
@@ -292,15 +338,16 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	// Query X
 	rowsX, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at
-		FROM x_connections WHERE workspace_id = $1
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at, is_deleted
+		FROM x_connections 
+		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsX.Close()
 		for rowsX.Next() {
 			var c domain.PlatformConnection
 			var platformStr string
-			if err := rowsX.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt); err == nil {
+			if err := rowsX.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
 				c.Platform = domain.Platform(platformStr)
 				conns = append(conns, c)
 			}
@@ -309,73 +356,169 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	return conns, nil
 }
-
 // SaveConnection upserts a platform connection for a workspace.
 func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error {
-	conn.ID = uuid.New()
-	var err error
+		conn.ID = uuid.New()
+		var err error
+		switch conn.Platform {
+		case domain.PlatformLinkedIn:
+			_, err = db.DB.ExecContext(ctx, `
+	INSERT INTO linkedin_connections
+	(id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+	ON CONFLICT (workspace_id, account_id)
+	DO UPDATE SET
+	access_token  = EXCLUDED.access_token,
+	refresh_token = EXCLUDED.refresh_token,
+	account_name  = EXCLUDED.account_name,
+	expires_at    = EXCLUDED.expires_at,
+	is_deleted    = false
+	`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
+				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
 
-	fmt.Println("Refresh Token - ", conn.RefreshToken)
+		case domain.PlatformMetaFB, domain.PlatformMetaIG:
+			_, err = db.DB.ExecContext(ctx, `
+	INSERT INTO meta_connections
+	(id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+	ON CONFLICT (workspace_id, account_id)
+	DO UPDATE SET
+	access_token  = EXCLUDED.access_token,
+	refresh_token = EXCLUDED.refresh_token,
+	account_name  = EXCLUDED.account_name,
+	expires_at    = EXCLUDED.expires_at,
+	is_deleted    = false
+	`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
+				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
 
-	switch conn.Platform {
-	case domain.PlatformLinkedIn:
-		_, err = db.DB.ExecContext(ctx, `
-			INSERT INTO linkedin_connections
-			    (id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
-			ON CONFLICT (workspace_id, account_id)
-			DO UPDATE SET
-			    access_token  = EXCLUDED.access_token,
-			    refresh_token = EXCLUDED.refresh_token,
-			    account_name  = EXCLUDED.account_name,
-			    expires_at    = EXCLUDED.expires_at
-		`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
-			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+		case domain.PlatformX:
+			_, err = db.DB.ExecContext(ctx, `
+	INSERT INTO x_connections
+	(id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+	ON CONFLICT (workspace_id, account_id)
+	DO UPDATE SET
+	access_token  = EXCLUDED.access_token,
+	refresh_token = EXCLUDED.refresh_token,
+	account_name  = EXCLUDED.account_name,
+	expires_at    = EXCLUDED.expires_at,
+	is_deleted    = false
+	`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
+				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
 
-	case domain.PlatformMetaFB, domain.PlatformMetaIG:
-		_, err = db.DB.ExecContext(ctx, `
-			INSERT INTO meta_connections
-			    (id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
-			ON CONFLICT (workspace_id, account_id)
-			DO UPDATE SET
-			    access_token  = EXCLUDED.access_token,
-			    refresh_token = EXCLUDED.refresh_token,
-			    account_name  = EXCLUDED.account_name,
-			    expires_at    = EXCLUDED.expires_at
-		`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
-			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
-
-	case domain.PlatformX:
-		_, err = db.DB.ExecContext(ctx, `
-			INSERT INTO x_connections
-			    (id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
-			ON CONFLICT (workspace_id, account_id)
-			DO UPDATE SET
-			    access_token  = EXCLUDED.access_token,
-			    refresh_token = EXCLUDED.refresh_token,
-			    account_name  = EXCLUDED.account_name,
-			    expires_at    = EXCLUDED.expires_at
-		`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
-			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
-
-	default:
-		err = fmt.Errorf("unsupported platform: %s", conn.Platform)
+		default:
+			err = fmt.Errorf("unsupported platform: %s", conn.Platform)
+		}
+		return err
 	}
-
-	return err
-}
 
 // DisconnectPlatform removes a platform connection.
 func DisconnectPlatform(ctx context.Context, workspaceID, connectionID, callerID string) error {
 	if err := requireRole(ctx, workspaceID, callerID, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return err
 	}
-	_, _ = db.DB.ExecContext(ctx, `DELETE FROM linkedin_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
-	_, _ = db.DB.ExecContext(ctx, `DELETE FROM meta_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
-	_, _ = db.DB.ExecContext(ctx, `DELETE FROM x_connections WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	
+	// Soft delete: set is_deleted = true instead of hard deleting
+	_, _ = db.DB.ExecContext(ctx, `UPDATE linkedin_connections SET is_deleted = true WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	_, _ = db.DB.ExecContext(ctx, `UPDATE meta_connections SET is_deleted = true WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	_, _ = db.DB.ExecContext(ctx, `UPDATE x_connections SET is_deleted = true WHERE id=$1 AND workspace_id=$2`, connectionID, workspaceID)
+	
 	return nil
+}
+// GetXConnectionByID fetches a specific X (Twitter) connection for a workspace,
+// scoped by both workspace_id and connection id so one workspace can't reach
+// into another's connection by guessing a UUID.
+func GetXConnectionByID(ctx context.Context, workspaceID, connectionID string) (*domain.PlatformConnection, error) {
+	var c domain.PlatformConnection
+	var platformStr string
+	err := db.DB.QueryRowContext(ctx, `
+		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1 AND id = $2
+	`, workspaceID, connectionID).Scan(
+		&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName,
+		&c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("X connection not found for this workspace")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get x connection: %w", err)
+	}
+	c.Platform = domain.Platform(platformStr)
+	return &c, nil
+}
+
+// GetXConnection fetches an X (Twitter) connection for a workspace.
+// If connectionID is empty, it falls back to the first connected account
+// found (kept for backward compatibility with single-account workspaces).
+// Prefer GetXConnectionByID once the caller knows which account it wants.
+func GetXConnection(ctx context.Context, workspaceID, connectionID string) (*domain.PlatformConnection, error) {
+	if connectionID != "" {
+		return GetXConnectionByID(ctx, workspaceID, connectionID)
+	}
+
+	var c domain.PlatformConnection
+	var platformStr string
+	err := db.DB.QueryRowContext(ctx, `
+		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1
+		ORDER BY created_at ASC
+		LIMIT 1
+	`, workspaceID).Scan(
+		&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName,
+		&c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no X connection found for this workspace")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get x connection: %w", err)
+	}
+	c.Platform = domain.Platform(platformStr)
+	return &c, nil
+}
+
+// ListXConnections handles GET /api/workspaces/in/:id/x/connections
+// Returns all connected X accounts for the workspace (no access tokens).
+func ListXConnections(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	rows, err := db.DB.QueryContext(c.Context(), `
+		SELECT id, account_id, account_name, expires_at, created_at
+		FROM x_connections WHERE workspace_id = $1
+		ORDER BY created_at ASC
+	`, wsID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+	defer rows.Close()
+
+	var out []fiber.Map
+	for rows.Next() {
+		var id, accountID, accountName string
+		var expiresAt *time.Time
+		var createdAt time.Time
+		if err := rows.Scan(&id, &accountID, &accountName, &expiresAt, &createdAt); err != nil {
+			continue
+		}
+		out = append(out, fiber.Map{
+			"id": id, "account_id": accountID, "account_name": accountName,
+			"expires_at": expiresAt, "created_at": createdAt,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: out,
+	})
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

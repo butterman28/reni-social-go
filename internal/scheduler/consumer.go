@@ -68,9 +68,9 @@ func publishPost(db *sql.DB, postID string) {
 		_ = markPostFailed(ctx, db, postID, err.Error())
 		return
 	}
-
-	var mu sync.Mutex
-	var firstErr error
+	
+	// Safely extract the attempt ID (guaranteed to exist because the poller/API set it)
+	attemptID := *post.CurrentPublishAttemptID 
 	var wg sync.WaitGroup
 
 	for _, conn := range connections {
@@ -84,60 +84,98 @@ func publishPost(db *sql.DB, postID string) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, pubErr := adapter.Publish(ctx, post, conn)
+			result, pubErr := adapter.Publish(ctx, post, conn)
+
 			if pubErr != nil {
 				log.Printf("❌ [Consumer] %s publish error for post %s: %v", conn.Platform, postID, pubErr)
-				mu.Lock()
-				if firstErr == nil {
-					firstErr = pubErr
-				}
-				mu.Unlock()
-			} else {
-				log.Printf("✅ [Consumer] %s published post %s", conn.Platform, postID)
+				// 👇 Fixed: Added attemptID, removed "..."
+				_ = InsertPublishResult(ctx, db, postID, attemptID, string(conn.Platform), conn.ID,
+					ResultFailed, "", "", "", pubErr.Error())
+				return
 			}
+
+			// Async / pending (Instagram video)
+			if result != nil && result.Pending {
+				log.Printf("⏳ [Consumer] %s container %s pending for post %s",
+					conn.Platform, result.ContainerID, postID)
+				// 👇 Fixed: Added attemptID
+				_ = InsertPublishResult(ctx, db, postID, attemptID, string(conn.Platform), conn.ID,
+					ResultProcessing, "", "", result.ContainerID, "")
+				return
+			}
+
+			// Synchronous success
+			log.Printf("✅ [Consumer] %s published post %s", conn.Platform, postID)
+			// 👇 Fixed: Added attemptID
+			_ = InsertPublishResult(ctx, db, postID, attemptID, string(conn.Platform), conn.ID,
+				ResultPublished, result.PlatformPostID, result.URL, "", "")
 		}()
 	}
 
 	wg.Wait()
 
-	if firstErr != nil {
-		_ = markPostFailed(ctx, db, postID, firstErr.Error())
-		return
-	}
-
-	_, err = db.ExecContext(ctx,
-		`UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW() WHERE id=$1`, postID)
-	if err != nil {
-		log.Printf("❌ [Consumer] mark published for post %s: %v", postID, err)
+	// Derive the post-level status from per-platform results
+	// 👇 Fixed: Removed the broken "{ ... }" duplicate line and passed attemptID
+	if err := FinalizePostStatus(ctx, db, postID, attemptID); err != nil {
+		log.Printf("❌ [Consumer] finalize post %s: %v", postID, err)
 	}
 }
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // DB helpers
 // ──────────────────────────────────────────────────────────────────────────────
-
+func saveContainerID(ctx context.Context, db *sql.DB, postID, containerID string) error {
+    _, err := db.ExecContext(ctx,
+        `UPDATE posts SET ig_container_id=$1, ig_container_status='processing', updated_at=NOW() WHERE id=$2`,
+        containerID, postID)
+    return err
+}
 func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, error) {
 	var p domain.Post
 	var mediaJSON, platformJSON []byte
 	var status string
+	var attemptIDStr sql.NullString // <--- Added
+	
+	var articleURL, articleTitle, failReason sql.NullString
 
 	err := db.QueryRowContext(ctx, `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
+		       article_url, article_title, current_publish_attempt_id,
 		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
 		FROM posts WHERE id = $1
 	`, postID).Scan(
 		&p.ID, &p.WorkspaceID, &p.AuthorID, &p.Content,
-		&mediaJSON, &platformJSON, &status,
-		&p.ScheduledAt, &p.PublishedAt, &p.FailReason,
+		&mediaJSON, &platformJSON,
+		&articleURL, &articleTitle, &attemptIDStr, // <--- Aligned with SELECT
+		&status,
+		&p.ScheduledAt, &p.PublishedAt, 
+		&failReason,              
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fetch post: %w", err)
 	}
+	
+	if attemptIDStr.Valid {
+		parsed, _ := uuid.Parse(attemptIDStr.String)
+		p.CurrentPublishAttemptID = &parsed
+	}
 
 	p.Status = domain.PostStatus(status)
 	_ = json.Unmarshal(mediaJSON, &p.MediaURLs)
 	_ = json.Unmarshal(platformJSON, &p.Platforms)
+
+	if articleURL.Valid {
+		p.ArticleURL = articleURL.String
+	}
+	if articleTitle.Valid {
+		p.ArticleTitle = articleTitle.String
+	}
+	if failReason.Valid {
+		p.FailReason = failReason.String
+	}
+
 	return &p, nil
 }
 

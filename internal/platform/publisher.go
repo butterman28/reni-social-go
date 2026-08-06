@@ -10,6 +10,8 @@ import (
 type PublishResult struct {
 	PlatformPostID string // the platform's own ID for the created post
 	URL            string // direct link to the published post (if available)
+	Pending        bool   // true = platform is still processing async
+    ContainerID    string // Instagram container ID to poll later
 }
 
 // Publisher is the contract every social platform adapter must satisfy.

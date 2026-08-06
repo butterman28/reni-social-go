@@ -33,11 +33,18 @@ type Config struct {
 	LinkedInRedirectURL  string
 
 	// ──────────────────────────────────────────
-	// Meta (Facebook / Instagram) App
+	// Meta (Facebook / Instagram) App — Facebook Login flow
 	// ──────────────────────────────────────────
 	MetaAppID       string
 	MetaAppSecret   string
 	MetaRedirectURL string
+
+	// ──────────────────────────────────────────
+	// Instagram API with Instagram Login (direct, non-Facebook-Login flow)
+	// ──────────────────────────────────────────
+	InstagramAppID       string
+	InstagramAppSecret   string
+	InstagramRedirectURL string
 
 	// ──────────────────────────────────────────
 	// X (Twitter) v2
@@ -47,6 +54,13 @@ type Config struct {
 	XAccessToken       string
 	XAccessTokenSecret string
 	XRedirectURL       string
+
+	// ──────────────────────────────────────────
+	// TikTok (Login Kit + Content Posting API)
+	// ──────────────────────────────────────────
+	TikTokClientKey    string
+	TikTokClientSecret string
+	TikTokRedirectURL  string
 
 	// ──────────────────────────────────────────
 	// Scheduler
@@ -59,6 +73,10 @@ type Config struct {
 	// ──────────────────────────────────────────
 	MediaWorkerQueue string // Redis key, e.g. "social:media_jobs"
 	FFmpegPath       string // e.g. "/usr/bin/ffmpeg"
+	// ──────────────────────────────────────────
+	// Notifications (email/SMS)
+	// ──────────────────────────────────────────
+	NotifyQueue string
 }
 
 var C *Config

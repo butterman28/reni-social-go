@@ -263,41 +263,44 @@ func TestPublishInstagramWithImage(t *testing.T) {
 // ── Publish (Instagram, video) — exercises waitForContainerReady too ───
 func TestPublishInstagramWithVideo(t *testing.T) {
 	var containerPayload map[string]any
-
 	mux := http.NewServeMux()
+	// We only mock the initial container creation now
 	mux.HandleFunc("/ig-account-1/media", func(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&containerPayload)
 		json.NewEncoder(w).Encode(map[string]any{"id": "container-vid-1"})
 	})
-	mux.HandleFunc("/container-vid-1", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{"status_code": "FINISHED"})
-	})
-	mux.HandleFunc("/ig-account-1/media_publish", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{"id": "ig-post-vid-1"})
-	})
+
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	old := graphBase
-	graphBase = srv.URL
-	defer func() { graphBase = old }()
+	// Override the package-level variables for the Instagram Login flow
+	oldBase := instagramGraphBase
+	oldVer := instagramAPIVersion
+	instagramGraphBase = srv.URL
+	instagramAPIVersion = "" // Handled in the mux path above
+	defer func() { 
+		instagramGraphBase = oldBase 
+		instagramAPIVersion = oldVer
+	}()
 
 	c := New()
 	post := &domain.Post{Content: "check this video", MediaURLs: []string{"https://example.com/clip.mp4"}}
 	conn := &domain.PlatformConnection{Platform: domain.PlatformMetaIG, AccountID: "ig-account-1", AccessToken: "fake-token"}
-
+	
 	result, err := c.Publish(context.Background(), post, conn)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if containerPayload["media_type"] != "VIDEO" {
+	
+	// NEW ASSERTIONS: It should be pending, not published yet
+	if !result.Pending {
+		t.Errorf("expected result.Pending to be true for video, got false")
+	}
+	if result.ContainerID != "container-vid-1" {
+		t.Errorf("expected ContainerID 'container-vid-1', got %v", result.ContainerID)
+	}
+	if containerPayload["media_type"] != "REELS" {
 		t.Errorf("expected media_type VIDEO, got %v", containerPayload["media_type"])
-	}
-	if containerPayload["video_url"] != "https://example.com/clip.mp4" {
-		t.Errorf("video_url mismatch: %v", containerPayload["video_url"])
-	}
-	if result.PlatformPostID != "ig-post-vid-1" {
-		t.Errorf("got %s", result.PlatformPostID)
 	}
 }
 
@@ -440,7 +443,7 @@ func TestPostJSONSuccess(t *testing.T) {
 	})
 
 	c := New()
-	result, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"})
+	result, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"}, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -456,7 +459,7 @@ func TestPostJSONErrorStatus(t *testing.T) {
 	})
 
 	c := New()
-	_, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"})
+	_, err := c.postJSON(context.Background(), srv.URL, map[string]any{"foo": "bar"}, "")
 	if err == nil {
 		t.Fatal("expected error for 400 response, got nil")
 	}

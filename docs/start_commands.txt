@@ -1,0 +1,91 @@
+Go can't truly hot-swap code — the binary always has to be rebuilt and restarted — but you can automate it so it happens instantly on every file save. The standard tool for this is **Air**.
+
+## 1. Install Air
+
+```bash
+go install github.com/air-verse/air@latest
+```
+
+(Your `PATH` already includes `~/go/bin`, so it'll just work. On Windows: `go install github.com/air-verse/air@latest` gives you `air.exe`.)
+
+## 2. Create one config per binary
+
+Since you have two entry points (`cmd/api` and `cmd/worker`), give each its own config.
+
+**`.air.api.toml`**
+
+```toml
+root = "."
+tmp_dir = "tmp/api"
+
+[build]
+  cmd = "go build -o ./tmp/api/api ./cmd/api"
+  bin = "./tmp/api/api"
+  include_ext = ["go"]
+  exclude_dir = ["bin", "tmp", "docs", "schemas"]
+  exclude_regex = ["_test.go"]
+  delay = 500
+
+[log]
+  time = true
+```
+
+**`.air.worker.toml`**
+
+```toml
+root = "."
+tmp_dir = "tmp/worker"
+
+[build]
+  cmd = "go build -o ./tmp/worker/worker ./cmd/worker"
+  bin = "./tmp/worker/worker"
+  include_ext = ["go"]
+  exclude_dir = ["bin", "tmp", "docs", "schemas"]
+  exclude_regex = ["_test.go"]
+  delay = 500
+
+[log]
+  time = true
+```
+
+Notes for your project specifically:
+- No `-tags=prod` here — that matches your dev build in `docs/build.txt`.
+- `exclude_regex = ["_test.go"]` means editing `client_test.go`, `handler_test.go`, etc. won't trigger a restart.
+- The `bin/` dir is excluded so Air never watches your committed binaries.
+
+## 3. Run them
+
+**Two terminals:**
+
+```bash
+air -c .air.api.toml      # terminal 1
+air -c .air.worker.toml   # terminal 2
+```
+
+**Or one command with goreman** (recommended, since you'll always want both):
+
+```bash
+go install github.com/mattn/goreman@latest
+```
+
+Create a `Procfile` in the project root:
+
+```
+api: air -c .air.api.toml
+worker: air -c .air.worker.toml
+```
+
+Then just:
+
+```bash
+goreman start
+```
+
+Both processes start, logs are color-coded per process, and Ctrl+C kills both.
+
+## 4. Add to `.gitignore`
+
+```gitignore
+tmp/
+```
+

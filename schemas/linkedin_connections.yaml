@@ -26,6 +26,10 @@ columns:
     type: timestamptz
     not_null: true
     default: now()
+  is_deleted: 
+    type: boolean
+    not_null: true
+    default: false
 
 indexes:
   - name: idx_linkedin_connections_workspace

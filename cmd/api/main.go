@@ -2,43 +2,60 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"strings" // <-- Added for HasPrefix
+	"syscall"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"reni-social/internal/routes"
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
 	"reni-social/pkg/db"
-
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect() // connect to DB
 
+	//fmt.Println("🔍 DEBUG: LinkedIn Client ID is:", config.C.LinkedInClientID)
+
+
 	// Initialize Redis
 	utils.InitRedis()
 
-	// app := fiber.New()
 	app := fiber.New(fiber.Config{
 		EnableTrustedProxyCheck: true,
 		TrustedProxies:          []string{"0.0.0.0/0"}, // trust all proxies
 		BodyLimit:               100 * 1024 * 1024,     // Set to 100MB
 	})
+	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
+		// Use a function to dynamically validate origins
+		AllowOriginsFunc: func(origin string) bool {
+			// 1. Allow standard local development origins
+			if origin == "http://localhost:5173" || origin == "http://127.0.0.1:5173" {
+				return true
+			}
+			// 2. Allow any device on the 192.168.1.x local network (with or without a port)
+			if strings.HasPrefix(origin, "http://192.168.1.") {
+				return true
+			}
+			// Deny all other origins
+			return false
+		},
 		AllowOrigins: "http://localhost:5173,http://localhost:5173/,https://renisocial.stories.ng",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Session-ID, timezone, locale, ip",
+		// AllowCredentials: true, // Uncomment this if your frontend sends cookies or auth headers
 	}))
 
 	app.Use(recover.New())
-
 	app.Options("/*", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNoContent)
 	})
@@ -70,5 +87,4 @@ func main() {
 	_ = <-c // This blocks main until a signal is received
 	fmt.Println("Gracefully shutting down...")
 	_ = app.Shutdown()
-
 }

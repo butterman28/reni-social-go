@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"reni-social/internal/domain"
+	"reni-social/pkg/db"
 )
 
 // Create handles POST /api/posts
@@ -105,12 +106,18 @@ func Publish(c *fiber.Ctx) error {
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
-
-	if err := PublishNow(c.Context(), postID, workspaceID); err != nil {
+	
+	// Call the updated service that returns the attemptID
+	attemptID, err := PublishNow(c.Context(), postID, workspaceID)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	return c.JSON(fiber.Map{"message": "post published"})
+	
+	//Tell the frontend to start tracking this specific attempt
+	return c.JSON(fiber.Map{
+		"message":    "publishing_initiated",
+		"attempt_id": attemptID,
+	})
 }
 
 // Schedule handles POST /api/posts/:id/schedule
@@ -134,4 +141,60 @@ func Schedule(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "post scheduled", "scheduled_at": body.ScheduledAt})
+}
+
+// Results handles GET /api/posts/in/:id/results
+// Returns per-platform publish status for the frontend to display.
+func Results(c *fiber.Ctx) error {
+	postID := c.Params("id")
+	attemptID := c.Query("attempt_id") // Grab the tracking ID from the URL
+
+	query := `
+		SELECT id::text, platform, status, platform_post_id, platform_post_url,
+		       container_id, fail_reason, created_at, updated_at
+		FROM publish_results
+		WHERE post_id = $1
+	`
+	args := []any{postID}
+
+	//if the frontend passes the attempt_id, ONLY return rows from this specific click
+	if attemptID != "" {
+		query += " AND publish_attempt_id = $2"
+		args = append(args, attemptID)
+	}
+	query += " ORDER BY created_at ASC"
+
+	rows, err := db.DB.QueryContext(c.Context(), query, args...)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer rows.Close()
+
+	type resultRow struct {
+		ID             string    `json:"id"`
+		Platform       string    `json:"platform"`
+		Status         string    `json:"status"`
+		PlatformPostID string    `json:"platform_post_id"`
+		PlatformURL    string    `json:"platform_post_url"`
+		ContainerID    string    `json:"container_id"`
+		FailReason     string    `json:"fail_reason"`
+		CreatedAt      time.Time `json:"created_at"`
+		UpdatedAt      time.Time `json:"updated_at"`
+	}
+
+	var results []resultRow
+	for rows.Next() {
+		var r resultRow
+		if err := rows.Scan(
+			&r.ID, &r.Platform, &r.Status,
+			&r.PlatformPostID, &r.PlatformURL,
+			&r.ContainerID, &r.FailReason,
+			&r.CreatedAt, &r.UpdatedAt,
+		); err != nil {
+			continue
+		}
+		results = append(results, r)
+	}
+
+	return c.JSON(fiber.Map{"results": results})
 }

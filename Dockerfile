@@ -1,44 +1,36 @@
-# ──────────────────────────────────────────────────────────────────────────────
-# Stage 1: Build
-# ──────────────────────────────────────────────────────────────────────────────
-FROM golang:1.22-alpine AS builder
-
+# ══════════════════════════════════════════════════════
+# Stage 1 — build
+# ══════════════════════════════════════════════════════
+FROM golang:1.25-alpine AS builder
 WORKDIR /app
-
-# Install build dependencies
 RUN apk add --no-cache git
 
-# Download dependencies first (cached layer)
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source
 COPY . .
 
-# Build both binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -tags=prod -ldflags="-s -w" -o bin/api ./cmd/api
+# -tags=docker → compiler picks config-docker.go + redis_client_docker.go
+RUN CGO_ENABLED=0 go build -tags=docker -ldflags="-s -w" -o bin/api    ./cmd/api \
+ && CGO_ENABLED=0 go build -tags=docker -ldflags="-s -w" -o bin/worker ./cmd/worker \
+ && CGO_ENABLED=0 go build -tags=docker -ldflags="-s -w" -o bin/schema ./cmd/schema
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -tags=prod -ldflags="-s -w" -o bin/worker ./cmd/worker
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Stage 2: Runtime
-# ──────────────────────────────────────────────────────────────────────────────
-FROM alpine:3.19
-
-# ffmpeg for media processing, ca-certificates for HTTPS to social APIs
+# ══════════════════════════════════════════════════════
+# Stage 2 — runtime
+# ══════════════════════════════════════════════════════
+FROM alpine:3.20
 RUN apk add --no-cache ffmpeg ca-certificates tzdata
-
 WORKDIR /app
 
-# Copy compiled binaries from builder
 COPY --from=builder /app/bin/api    ./api
 COPY --from=builder /app/bin/worker ./worker
+COPY --from=builder /app/bin/schema ./schema
 
-# Expose API port (matches config-prod.go Port)
-EXPOSE 1041
+# schema binary globs ./schemas/*.yaml at runtime
+COPY --from=builder /app/schemas ./schemas
 
-# Default: run the API server.
-# Override CMD to run the worker: docker run ... ./worker
+# bake the docker env file — config-docker.go loads it on startup
+COPY --from=builder /app/.env_docker ./.env_docker
+
+EXPOSE 1040
 CMD ["./api"]

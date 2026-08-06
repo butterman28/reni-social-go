@@ -60,9 +60,13 @@ var _ platform.Publisher = (*Client)(nil)
 
 // RequestToken fetches a request token and returns (oauthToken, authorizeURL, error).
 // Store oauthToken in Redis keyed by state so the callback can look it up.
-func (c *Client) RequestToken(ctx context.Context, id string, platform string) (oauthToken, authorizeURL string, err error) {
+func (c *Client) RequestToken(ctx context.Context, state string) (oauthToken, authorizeURL string, err error) {
+	callback := config.C.XRedirectURL
+	if state != "" {
+		callback += "?state=" + url.QueryEscape(state)
+	}
 	header := c.buildOAuth1Header(http.MethodPost, requestTokenURL, url.Values{
-		"oauth_callback": {config.C.BackUrl + "/workspaces/in/" + id + "/connect/in/" + platform + "/callback"},
+		"oauth_callback": {callback},
 	}, config.C.XAPIKey, config.C.XAPISecret, "", "")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestTokenURL, nil)
@@ -145,8 +149,18 @@ func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.Pl
 	accessToken := conn.AccessToken
 	accessSecret := conn.RefreshToken
 
+	text := post.Content
+	// If an article URL is provided but not in the text, append it 
+	// so X generates a rich preview card instead of a bare link.
+	if post.ArticleURL != "" && !strings.Contains(text, post.ArticleURL) {
+		if text != "" {
+			text += "\n\n"
+		}
+		text += post.ArticleURL
+	}
+
 	payload := map[string]any{
-		"text": post.Content,
+		"text": text,
 	}
 
 	body, err := json.Marshal(payload)

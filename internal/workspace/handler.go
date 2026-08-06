@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -15,6 +15,7 @@ import (
 	"reni-social/internal/types"
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
+	"reni-social/pkg/db"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -210,27 +211,59 @@ func Connections(c *fiber.Ctx) error {
 	})
 }
 
+
 // ConnectPlatform handles POST /api/workspaces/in/:id/connect/:platform
-// Returns the OAuth redirect URL for the frontend to navigate the user to.
 func ConnectPlatform(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
 	p := c.Params("platform")
 
-	// State encodes workspaceID so the callback knows where to save the connection
+	// 1. Verify the user has permission
+	if err := requireRole(c.UserContext(), wsID, userID, domain.RoleAdmin, domain.RoleOwner); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: err.Error(),
+		})
+	}
+
+	if p != "linkedin" && p != "meta" && p != "x" {
+		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Unsupported platform: " + p,
+		})
+	}
+
+	//NEW: Check if an active connection exists, AND revive it if it's soft-deleted but valid
+	hasActive, err := CheckAndReviveConnection(c.UserContext(), wsID, p)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
+			Status:  false,
+			Message: "Failed to check existing connections: " + err.Error(),
+		})
+	}
+
+	// If it exists (or was just revived), skip OAuth and tell the frontend
+	if hasActive {
+		return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+			Status:  true,
+			Message: "Already connected",
+			Data:    fiber.Map{"already_connected": true},
+		})
+	}
+
+	// 3. Proceed with normal OAuth flow if no valid connection exists
 	state := wsID + ":" + utils.RandomAlphaNumeric(16)
-
-	// Store state in Redis for 10 minutes to verify in the callback
 	utils.RDB.Set(utils.Ctx, "oauth_state:"+state, wsID, 10*60*1000000000)
-
+	
 	var redirectURL string
 	switch p {
 	case "linkedin":
 		redirectURL = linkedin.AuthorizationURL(state, wsID, p)
 	case "meta":
-		redirectURL = meta.AuthorizationURL(state, wsID, p)
+		redirectURL = meta.InstagramLoginAuthorizationURL(state)
 	case "x":
 		xClient := xplatform.New()
-		_, authURL, err := xClient.RequestToken(c.Context(), wsID, p)
+		_, authURL, err := xClient.RequestToken(c.UserContext(), state)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
 				Status:  false,
@@ -238,11 +271,6 @@ func ConnectPlatform(c *fiber.Ctx) error {
 			})
 		}
 		redirectURL = authURL
-	default:
-		return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Unsupported platform: " + p,
-		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
@@ -254,99 +282,72 @@ func ConnectPlatform(c *fiber.Ctx) error {
 
 // OAuthCallback handles GET /api/workspaces/in/:id/connect/:platform/callback
 func OAuthCallback(c *fiber.Ctx) error {
-	wsID := c.Params("id")
 	p := c.Params("platform")
 	code := c.Query("code")
 	state := c.Query("state")
+	if state == "" {
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Missing state parameter"))
+	}
+
+	// Extract wsID from state (format: "wsID:randomString")
+	parts := strings.Split(state, ":")
+	if len(parts) < 2 {
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Invalid state format"))
+	}
+	wsID := parts[0]
 
 	// Verify state
 	storedWsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
 	if err != nil || storedWsID != wsID {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid or expired OAuth state"))
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Invalid or expired OAuth state"))
 	}
+
+	// Clear the state from Redis
 	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
 
 	wsUUID, err := uuid.Parse(wsID)
 	if err != nil {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Invalid workspace ID"))
+		return c.Redirect(config.C.AppUrl + "/?error=" + url.QueryEscape("Invalid workspace ID"))
 	}
 
-	var conn *domain.PlatformConnection
+	var slug string
+	err = db.DB.QueryRowContext(c.UserContext(), `SELECT slug FROM workspaces WHERE id = $1`, wsUUID).Scan(&slug)
+	if err != nil || slug == "" {
+		slug = wsID // Fallback to UUID if slug is somehow missing
+	}
+	redirectBase := config.C.AppUrl + "/" + slug + "/settings"
 
+	var conn *domain.PlatformConnection
 	switch p {
 	case "linkedin":
 		client := linkedin.New()
-		redirectURI := config.C.BackUrl + "/workspaces/in/" + wsID + "/connect/in/" + p + "/callback"
-		conn, err = client.ExchangeCode(c.Context(), code, redirectURI)
+		conn, err = client.ExchangeCode(c.UserContext(), code)
 	case "meta":
 		client := meta.New()
-		redirectURI := config.C.BackUrl + "/workspaces/in/" + wsID + "/connect/in/" + p + "/callback"
-		conn, err = client.ExchangeCode(c.Context(), code, "meta_ig", redirectURI)
+		conn, err = client.ExchangeInstagramLoginCode(c.UserContext(), code)
 	case "x":
 		client := xplatform.New()
 		oauthToken := c.Query("oauth_token")
 		oauthVerifier := c.Query("oauth_verifier")
-		conn, err = client.ExchangeVerifier(c.Context(), oauthToken, oauthVerifier)
+		conn, err = client.ExchangeVerifier(c.UserContext(), oauthToken, oauthVerifier)
 	default:
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Unsupported platform"))
+		return c.Redirect(redirectBase + "?tab=accounts&error=" + url.QueryEscape("Unsupported platform"))
 	}
 
 	if err != nil {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
+		return c.Redirect(redirectBase + "?tab=accounts&error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
 	}
 
 	conn.WorkspaceID = wsUUID
 
-	if err := SaveConnection(c.Context(), conn); err != nil {
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
+	// Save the connection (This will now succeed because we fixed the SQL comma!)
+	if err := SaveConnection(c.UserContext(), conn); err != nil {
+		return c.Redirect(redirectBase + "?tab=accounts&error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
 	}
 
-	// Redirect to frontend success page
-	return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?connected=" + p)
+	// Redirect to frontend settings page, accounts tab, with success message
+	return c.Redirect(redirectBase + "?tab=accounts&connected=" + p)
 }
-
-// LinkedIn_OAuthCallback handles GET /api/workspaces/connect/in/linkedin/callback
-func LinkedIn_OAuthCallback(c *fiber.Ctx) error {
-	p := "linkedin"
-	code := c.Query("code")
-	state := c.Query("state")
-
-	fmt.Println("State - ", state)
-	fmt.Println("Code - ", code)
-
-	// Verify state and extract the workspace ID stored against it
-	wsID, err := utils.RDB.Get(utils.Ctx, "oauth_state:"+state).Result()
-	if err != nil || wsID == "" {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid or expired OAuth state"))
-	}
-	utils.RDB.Del(utils.Ctx, "oauth_state:"+state)
-
-	wsUUID, err := uuid.Parse(wsID)
-	if err != nil {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces?error=" + url.QueryEscape("Invalid workspace ID"))
-	}
-
-	client := linkedin.New()
-	redirectURI := config.C.BackUrl + "/workspaces/connect/linkedin/callback"
-	conn, err := client.ExchangeCode(c.Context(), code, redirectURI)
-	if err != nil {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("OAuth exchange failed: "+err.Error()))
-	}
-
-	conn.WorkspaceID = wsUUID
-
-	if err := SaveConnection(c.Context(), conn); err != nil {
-		fmt.Println(err)
-		return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?error=" + url.QueryEscape("Failed to save connection: "+err.Error()))
-	}
-
-	// Redirect to frontend success page
-	return c.Redirect(config.C.AppUrl + "/workspaces/" + wsID + "?connected=" + p)
-}
-
 // Disconnect handles DELETE /api/workspaces/in/:id/connections/:connectionId
 func Disconnect(c *fiber.Ctx) error {
 	callerID := c.Locals("userid").(string)
@@ -363,5 +364,203 @@ func Disconnect(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
 		Status:  true,
 		Message: "Platform disconnected",
+	})
+}
+// ──────────────────────────────────────────────────────────────────────────────
+// X (Twitter) — read endpoints
+// ──────────────────────────────────────────────────────────────────────────────
+
+// GetXTweet handles GET /api/workspaces/in/:id/x/tweets/:tweetId
+// Optional query params are passed through as tweet.fields / expansions etc.
+func GetXTweet(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	tweetID := c.Params("tweetId")
+	connectionID := c.Query("connection_id")
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID, connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+
+	data, err := client.GetTweet(c.Context(), conn, tweetID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXTweetWithIncludes handles GET /api/workspaces/in/:id/x/tweets/:tweetId/full
+// Fixed rich-expansion endpoint (media, polls, places, author) — no custom fields needed.
+func GetXTweetWithIncludes(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	tweetID := c.Params("tweetId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID,connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	data, err := client.GetTweetWithIncludes(c.Context(), conn, tweetID)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXUser handles GET /api/workspaces/in/:id/x/users/:userId
+func GetXUser(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	targetUserID := c.Params("userId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID, connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+	if params.Get("user.fields") == "" {
+		params.Set("user.fields", "description,profile_image_url,public_metrics,created_at")
+	}
+
+	data, err := client.GetUser(c.Context(), conn, targetUserID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXSpace handles GET /api/workspaces/in/:id/x/spaces/:spaceId
+func GetXSpace(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	spaceID := c.Params("spaceId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID, connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+	if params.Get("space.fields") == "" {
+		params.Set("space.fields", "title,state,created_at,lang")
+	}
+
+	data, err := client.GetSpace(c.Context(), conn, spaceID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// GetXList handles GET /api/workspaces/in/:id/x/lists/:listId
+func GetXList(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+	listID := c.Params("listId")
+	connectionID := c.Query("connection_id")
+
+	if _, err := GetWorkspace(c.Context(), wsID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	conn, err := GetXConnection(c.Context(), wsID,connectionID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	client := xplatform.New()
+	params := url.Values{}
+	for k, v := range c.Queries() {
+		params.Set(k, v)
+	}
+	if params.Get("list.fields") == "" {
+		params.Set("list.fields", "name,description,member_count,follower_count")
+	}
+
+	data, err := client.GetList(c.Context(), conn, listID, params)
+	if err != nil {
+		return c.Status(fiber.StatusBadGateway).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status: true, Message: "OK", Data: data,
 	})
 }

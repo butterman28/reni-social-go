@@ -187,26 +187,37 @@ func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnecti
 
 // Publish routes to the correct publishing method based on platform type.
 func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
-	switch conn.Platform {
-	case domain.PlatformMetaFB:
-		return c.publishFacebook(ctx, post, conn)
-	case domain.PlatformMetaIG:
-		return c.publishInstagram(ctx, post, conn)
-	default:
-		return nil, fmt.Errorf("meta: unsupported platform: %s", conn.Platform)
-	}
+    switch conn.Platform {
+    case domain.PlatformMetaFB:
+        return c.publishFacebook(ctx, post, conn)
+    case domain.PlatformMetaIG:
+        // Route to the Instagram Login flow — matches how the connection
+        return c.PublishInstagramLogin(ctx, post, conn)
+    default:
+        return nil, fmt.Errorf("meta: unsupported platform: %s", conn.Platform)
+    }
 }
 
 // publishFacebook posts to a Facebook Page feed.
 func (c *Client) publishFacebook(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	endpoint := fmt.Sprintf("%s/%s/feed", graphBase, conn.AccountID)
+	
+	message := post.Content
+	// If an article URL is provided but not in the text, append it 
+	// so Facebook generates a rich preview card.
+	if post.ArticleURL != "" && !strings.Contains(message, post.ArticleURL) {
+		if message != "" {
+			message += "\n\n"
+		}
+		message += post.ArticleURL
+	}
 
 	payload := map[string]any{
-		"message":      post.Content,
+		"message":      message,
 		"access_token": conn.AccessToken,
 	}
 
-	result, err := c.postJSON(ctx, endpoint, payload)
+	result, err := c.postJSON(ctx, endpoint, payload, conn.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("meta/fb: publish: %w", err)
 	}
@@ -235,13 +246,13 @@ func (c *Client) publishInstagram(ctx context.Context, post *domain.Post, conn *
 
 	isVideo := isVideoURL(mediaURL)
 	if isVideo {
-		containerPayload["media_type"] = "VIDEO"
+		containerPayload["media_type"] = "REELS"
 		containerPayload["video_url"] = mediaURL
 	} else {
 		containerPayload["image_url"] = mediaURL
 	}
 
-	containerResp, err := c.postJSON(ctx, containerEndpoint, containerPayload)
+	containerResp, err := c.postJSON(ctx, containerEndpoint, containerPayload, conn.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("meta/ig: create container: %w", err)
 	}
@@ -266,7 +277,7 @@ func (c *Client) publishInstagram(ctx context.Context, post *domain.Post, conn *
 		"access_token": conn.AccessToken,
 	}
 
-	publishResp, err := c.postJSON(ctx, publishEndpoint, publishPayload)
+	publishResp, err := c.postJSON(ctx, publishEndpoint, publishPayload, conn.AccessToken)
 	if err != nil {
 		return nil, fmt.Errorf("meta/ig: publish container: %w", err)
 	}
@@ -287,6 +298,7 @@ func (c *Client) waitForContainerReady(ctx context.Context, containerID, accessT
 		if err != nil {
 			return err
 		}
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			return err
@@ -344,6 +356,8 @@ func (c *Client) fetchPages(ctx context.Context, userAccessToken string) ([]meta
 		return nil, err
 	}
 
+	req.Header.Set("Authorization", "Bearer "+userAccessToken)
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -384,6 +398,7 @@ func (c *Client) fetchInstagramAccount(ctx context.Context, userAccessToken stri
 		if err != nil {
 			continue
 		}
+		req.Header.Set("Authorization", "Bearer "+page.AccessToken)
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			continue
@@ -415,6 +430,8 @@ func (c *Client) fetchIGUsername(ctx context.Context, igAccountID, pageAccessTok
 	if err != nil {
 		return ""
 	}
+	req.Header.Set("Authorization", "Bearer "+pageAccessToken)
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return ""
@@ -435,6 +452,8 @@ func (c *Client) fetchMe(ctx context.Context, accessToken string) (id, name stri
 		return "", "", err
 	}
 
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", "", err
@@ -451,7 +470,7 @@ func (c *Client) fetchMe(ctx context.Context, accessToken string) (id, name stri
 	return me.ID, me.Name, nil
 }
 
-func (c *Client) postJSON(ctx context.Context, endpoint string, payload map[string]any) (map[string]any, error) {
+func (c *Client) postJSON(ctx context.Context, endpoint string, payload map[string]any, accessToken string) (map[string]any, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -462,6 +481,9 @@ func (c *Client) postJSON(ctx context.Context, endpoint string, payload map[stri
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

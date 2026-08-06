@@ -21,6 +21,12 @@ columns:
     type: jsonb
     not_null: true
     default: "'[]'::jsonb"
+  article_url:
+    type: varchar(2000)
+    not_null: false
+  article_title:
+    type: varchar(500)
+    not_null: false
   status:
     type: varchar(50)
     not_null: true
@@ -34,6 +40,12 @@ columns:
   fail_reason:
     type: text
     not_null: false
+  ig_container_id:
+    type: varchar(255)
+    not_null: false
+  ig_container_status:
+    type: varchar(50)
+    not_null: false
   created_at:
     type: timestamptz
     not_null: true
@@ -42,7 +54,10 @@ columns:
     type: timestamptz
     not_null: true
     default: now()
-
+  current_publish_attempt_id:
+    type: uuid
+    not_null: false
+  
 indexes:
   - name: idx_posts_workspace_id
     columns: [workspace_id]
@@ -50,3 +65,4 @@ indexes:
     columns: [author_id]
   - name: idx_posts_status_scheduled
     columns: [status, scheduled_at]
+
