@@ -17,7 +17,7 @@ type PostmanHeader struct {
 	Type  string `json:"type"`
 }
 
-// 👇 NEW: Struct to hold Query Parameters for Postman
+//  NEW: Struct to hold Query Parameters for Postman
 type PostmanQuery struct {
 	Key         string `json:"key"`
 	Value       string `json:"value"`
@@ -28,7 +28,7 @@ type PostmanUrl struct {
 	Raw   string         `json:"raw"`
 	Host  []string       `json:"host"`
 	Path  []string       `json:"path"`
-	Query []PostmanQuery `json:"query,omitempty"` // 👈 Added Query array
+	Query []PostmanQuery `json:"query,omitempty"` //  Added Query array
 }
 
 type PostmanRequest struct {
@@ -63,7 +63,7 @@ func main() {
 	collection.Info.Schema = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 
 	//Added the Pro-Tip table at the very top!
-	collection.Info.Description = "## 💡 Quick Setup Pro-Tip (Do This First!)\n\n" +
+	collection.Info.Description = "##  Quick Setup Pro-Tip (Do This First!)\n\n" +
 		"Before testing any endpoints, click on the **Reni Social API** collection name in the left sidebar, go to the **Variables** tab, and set up these initial values so you don't have to type them manually every time:\n\n" +
 		"| Variable | Initial Value | Notes |\n" +
 		"| :--- | :--- | :--- |\n" +
@@ -78,7 +78,7 @@ func main() {
 		"1. `Authorization: Bearer {{token}}` (Fiber middleware just checks for the word \"Bearer\")\n" +
 		"2. `X-Session-Id: {{session_id}}` (The actual session token from the `/api/auth/signin` response)\n\n" +
 		"**Workflows:**\n" +
-		"Check the **📚 API Workflows & Guides** folder below for detailed frontend integration guides, including the Real-Time Async Publishing flow."
+		"Check the ** API Workflows & Guides** folder below for detailed frontend integration guides, including the Real-Time Async Publishing flow."
 
 	collection.Item = append(collection.Item, createWorkflowGuide())
 
@@ -98,7 +98,7 @@ func main() {
 		}
 
 		// ──────────────────────────────────────────────────────
-		// 👇 SMART QUERY PARAMETER INJECTION
+		//  SMART QUERY PARAMETER INJECTION
 		// ──────────────────────────────────────────────────────
 		var queries []PostmanQuery
 		rawURL := "http://127.0.0.1:1040" + route.Path
@@ -166,10 +166,10 @@ func main() {
 
 		var reqDescription string
 		if strings.Contains(route.Path, "/publish") && route.Method == "POST" {
-			reqDescription = "### ⚡ Async Publish Trigger\n\nThis endpoint does **not** block. It initiates the publish process and immediately returns an `attempt_id`.\n\n**Next Step:** Use the returned `attempt_id` to poll the `/results` endpoint.\n\n*(See the \"📚 API Workflows & Guides\" folder for the full frontend integration guide).*"
+			reqDescription = "###  Async Publish Trigger\n\nThis endpoint does **not** block. It initiates the publish process and immediately returns an `attempt_id`.\n\n**Next Step:** Use the returned `attempt_id` to poll the `/results` endpoint.\n\n*(See the \" API Workflows & Guides\" folder for the full frontend integration guide).*"
 		}
 		if strings.Contains(route.Path, "/results") && route.Method == "GET" {
-			reqDescription = "### 📊 Real-Time Status Polling\n\nPass the `?attempt_id={{attempt_id}}` query parameter to track the exact status of a specific publish click.\n\n**Statuses:**\n- `processing`: Platform is still working (show spinner)\n- `published`: Success (show checkmark)\n- `failed`: Error (show `fail_reason`)"
+			reqDescription = "###  Real-Time Status Polling\n\nPass the `?attempt_id={{attempt_id}}` query parameter to track the exact status of a specific publish click.\n\n**Statuses:**\n- `processing`: Platform is still working (show spinner)\n- `published`: Success (show checkmark)\n- `failed`: Error (show `fail_reason`)"
 		}
 
 		item := PostmanItem{
@@ -179,10 +179,10 @@ func main() {
 				Header:      headers,
 				Description: reqDescription,
 				Url: PostmanUrl{
-					Raw:   rawURL,      // 👈 Now includes ?workspace_id=...
+					Raw:   rawURL,      //  Now includes ?workspace_id=...
 					Host:  []string{"http://127.0.0.1:1040"},
 					Path:  cleanPath,
-					Query: queries,     // 👈 Populates the Postman "Params" tab!
+					Query: queries,     //  Populates the Postman "Params" tab!
 				},
 			},
 		}
@@ -202,14 +202,14 @@ func main() {
 		return
 	}
 
-	fmt.Println("✅ Packaged! Saved to reni_social_api.postman_collection.json")
+	fmt.Println(" Packaged! Saved to reni_social_api.postman_collection.json")
 }
 
 func createWorkflowGuide() PostmanItem {
-	md := "# 🚀 Real-Time Publishing Workflow\n\n" +
+	md := "#  Real-Time Publishing Workflow\n\n" +
 		"When a user clicks \"Publish\", the backend processes platforms asynchronously (especially Instagram/TikTok videos, which can take 10–30 seconds to process on Meta's servers). Instead of blocking the UI with a long loading spinner, we use an **Idempotency Key + Smart Polling** approach.\n\n" +
 		"## The 3-Step Flow\n\n" +
-		"### 1️⃣ Trigger the Publish\n" +
+		"###  Trigger the Publish\n" +
 		"**Endpoint:** `POST /api/in/posts/in/:id/publish?workspace_id=:workspace_id`\n\n" +
 		"Instead of returning \"post published\", the API now immediately returns a tracking ID.\n\n" +
 		"**Response:**\n" +
@@ -221,7 +221,7 @@ func createWorkflowGuide() PostmanItem {
 		"```\n" +
 		"**Action:** Save the `attempt_id` in your component state. This is your \"receipt\" for this specific button click.\n\n" +
 		"---\n\n" +
-		"### 2️⃣ Poll for Real-Time Status\n" +
+		"###  Poll for Real-Time Status\n" +
 		"**Endpoint:** `GET /api/in/posts/in/:id/results?attempt_id=:attempt_id`\n\n" +
 		"**Action:** Start a `setInterval` (every 2 seconds) calling this endpoint using the `attempt_id` from Step 1. Because we pass the `attempt_id`, the API will ignore any old failed attempts and only return the status of the *current* publish job.\n\n" +
 		"**Response:**\n" +
@@ -244,11 +244,11 @@ func createWorkflowGuide() PostmanItem {
 		"}\n" +
 		"```\n" +
 		"**UI Mapping:**\n" +
-		"* `status === 'processing'` ➡️ Show a spinner for that specific platform.\n" +
-		"* `status === 'published'` ➡️ Show a green checkmark.\n" +
-		"* `status === 'failed'` ➡️ Show a red X and display the `fail_reason`.\n\n" +
+		"* `status === 'processing'`  Show a spinner for that specific platform.\n" +
+		"* `status === 'published'`  Show a green checkmark.\n" +
+		"* `status === 'failed'`  Show a red X and display the `fail_reason`.\n\n" +
 		"---\n\n" +
-		"### 3️⃣ Stop Polling (Terminal State)\n" +
+		"###  Stop Polling (Terminal State)\n" +
 		"**Action:** Check if **all** platforms in the `results` array have reached a terminal state (`published` or `failed`). Once they have, clear the interval.\n\n" +
 		"```javascript\n" +
 		"const allDone = results.every(r => r.status === 'published' || r.status === 'failed');\n" +
@@ -258,7 +258,7 @@ func createWorkflowGuide() PostmanItem {
 		"```\n"
 
 	return PostmanItem{
-		Name:        "📚 API Workflows & Guides",
+		Name:        " API Workflows & Guides",
 		Description: "Documentation for complex multi-step workflows in the Reni Social API.",
 		Item: []PostmanItem{
 			{

@@ -73,10 +73,13 @@ func init() {
 		// Scheduler
 		SchedulerPollIntervalSecs: 30,
 		ScheduledPostsQueue:       "social:post_queue_dev",
+		MaxConcurrentPublishes:    25,
+		PublishTimeoutMinutes:     5,
 
 		// Media worker
 		MediaWorkerQueue: "social:media_jobs_dev",
 		FFmpegPath:       "ffmpeg",
+	
 		// notifications 
 		NotifyQueue: "social:notify_queue_dev",
 	}

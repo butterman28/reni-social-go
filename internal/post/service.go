@@ -157,6 +157,10 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 	if f.Limit == 0 {
 		f.Limit = 20
 	}
+	// Hard cap to prevent DB exhaustion / memory spikes from abuse
+	if f.Limit > 100 {
+		f.Limit = 100
+	}
 	offset := (f.Page) * f.Limit
 	args := []any{workspaceID, f.Limit, offset}
 

@@ -78,7 +78,7 @@ func RunLinkedInTest() {
 	client := linkedin.New()
 
 	fmt.Println("\nSTEP 2: Exchanging code for token + fetching profile...")
-	conn, err := client.ExchangeCode(ctx, code, redirectURL)
+	conn, err := client.ExchangeCode(ctx, code)
 	if err != nil {
 		log.Fatalf("❌ ExchangeCode failed: %v", err)
 	}

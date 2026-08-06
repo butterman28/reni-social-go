@@ -16,12 +16,12 @@ import (
 func RunTikTokTest() {
 	redirectURL := config.C.TikTokRedirectURL
 	if redirectURL == "" || config.C.TikTokClientKey == "" {
-		log.Fatal("❌ TIKTOK_CLIENT_KEY / TIKTOK_REDIRECT_URL not set — check your .env")
+		log.Fatal(" TIKTOK_CLIENT_KEY / TIKTOK_REDIRECT_URL not set — check your .env")
 	}
 
 	verifier, challenge, err := tiktok.GeneratePKCE()
 	if err != nil {
-		log.Fatalf("❌ generate PKCE: %v", err)
+		log.Fatalf(" generate PKCE: %v", err)
 	}
 	state := "tiktok-test-state"
 
@@ -74,11 +74,11 @@ func RunTikTokTest() {
 	var code string
 	select {
 	case code = <-codeCh:
-		fmt.Println("✅ Received authorization code.")
+		fmt.Println(" Received authorization code.")
 	case err := <-errCh:
-		log.Fatalf("❌ OAuth callback error: %v", err)
+		log.Fatalf(" OAuth callback error: %v", err)
 	case <-time.After(3 * time.Minute):
-		log.Fatal("❌ Timed out waiting for TikTok redirect (3 min).")
+		log.Fatal(" Timed out waiting for TikTok redirect (3 min).")
 	}
 	_ = server.Close()
 
@@ -88,9 +88,9 @@ func RunTikTokTest() {
 	fmt.Println("\nSTEP 2: Exchanging code for token...")
 	conn, err := client.ExchangeCode(ctx, code, verifier)
 	if err != nil {
-		log.Fatalf("❌ ExchangeCode failed: %v", err)
+		log.Fatalf(" ExchangeCode failed: %v", err)
 	}
-	fmt.Printf("✅ Connected as: %s (open_id: %s)\n", conn.AccountName, conn.AccountID)
+	fmt.Printf(" Connected as: %s (open_id: %s)\n", conn.AccountName, conn.AccountID)
 	fmt.Printf("   Access token (truncated): %s...\n", truncate(conn.AccessToken, 12))
 	if conn.ExpiresAt != nil {
 		fmt.Printf("   Expires at: %s\n", conn.ExpiresAt.Format(time.RFC1123))
@@ -105,7 +105,7 @@ func RunTikTokTest() {
 		fmt.Println("Initiating PULL_FROM_URL publish...")
 		result, err := client.Publish(ctx, post, conn)
 		if err != nil {
-			log.Fatalf("❌ Publish failed: %v", err)
+			log.Fatalf(" Publish failed: %v", err)
 		}
 		printResult(result)
 		publishID = result.PlatformPostID
@@ -116,9 +116,9 @@ func RunTikTokTest() {
 	if publishID != "" && askYesNo("\nSTEP 4: Poll publish status using FetchPublishStatus?") {
 		status, err := client.FetchPublishStatus(ctx, conn, publishID)
 		if err != nil {
-			log.Printf("❌ FetchPublishStatus failed: %v", err)
+			log.Printf(" FetchPublishStatus failed: %v", err)
 		} else {
-			fmt.Println("✅ Publish status:")
+			fmt.Println(" Publish status:")
 			printJSON(status)
 		}
 	}

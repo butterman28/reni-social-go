@@ -46,6 +46,8 @@ func init() {
 		// Scheduler
 		SchedulerPollIntervalSecs: 30,
 		ScheduledPostsQueue:       "social:post_queue",
+		MaxConcurrentPublishes:    25,
+		PublishTimeoutMinutes:     5,
 
 		// Media worker
 		MediaWorkerQueue: "social:media_jobs",

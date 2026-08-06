@@ -22,7 +22,7 @@ func main() {
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect() // connect to DB
 
-	//fmt.Println("🔍 DEBUG: LinkedIn Client ID is:", config.C.LinkedInClientID)
+	//fmt.Println(" DEBUG: LinkedIn Client ID is:", config.C.LinkedInClientID)
 
 
 	// Initialize Redis

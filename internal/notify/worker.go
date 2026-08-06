@@ -56,7 +56,7 @@ func enqueue(job Job) error {
 // db is unused but accepted to match the supervise(func(*sql.DB)) signature
 // shared by the other workers.
 func StartNotifyWorker() {
-	log.Printf("✉️  [Notify] Started — listening on queue: %s", config.C.NotifyQueue)
+	log.Printf("  [Notify] Started — listening on queue: %s", config.C.NotifyQueue)
 
 	for {
 		result, err := utils.RDB.BRPop(utils.Ctx, 5*time.Second, config.C.NotifyQueue).Result()
@@ -68,7 +68,7 @@ func StartNotifyWorker() {
 		payload := result[1]
 		var job Job
 		if err := json.Unmarshal([]byte(payload), &job); err != nil {
-			log.Printf("⚠️  [Notify] malformed job payload: %v", err)
+			log.Printf("  [Notify] malformed job payload: %v", err)
 			continue
 		}
 
@@ -84,7 +84,7 @@ func dispatch(job Job) {
 	case ChannelSMS:
 		err = utils.SendSMS(job.To, job.Body)
 	default:
-		log.Printf("⚠️  [Notify] unknown channel: %s", job.Channel)
+		log.Printf("  [Notify] unknown channel: %s", job.Channel)
 		return
 	}
 
@@ -94,8 +94,8 @@ func dispatch(job Job) {
 		// spamming an already-failing upstream more than it helps. Worth
 		// revisiting with a bounded retry + dead-letter queue if delivery
 		// failures turn out to be common in practice.
-		log.Printf("❌ [Notify] %s send to %s failed: %v", job.Channel, job.To, err)
+		log.Printf(" [Notify] %s send to %s failed: %v", job.Channel, job.To, err)
 		return
 	}
-	log.Printf("✅ [Notify] %s sent to %s", job.Channel, job.To)
+	log.Printf(" [Notify] %s sent to %s", job.Channel, job.To)
 }

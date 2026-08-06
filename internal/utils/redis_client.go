@@ -24,10 +24,10 @@ func InitRedis() {
 
 	_, err := RDB.Ping(Ctx).Result()
 	if err != nil {
-		log.Fatalf("❌ Failed to connect to Redis: %v", err)
+		log.Fatalf(" Failed to connect to Redis: %v", err)
 	}
 
-	log.Println("✅ Connected to Redis")
+	log.Println(" Connected to Redis")
 }
 
 // Store session

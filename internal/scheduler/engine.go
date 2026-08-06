@@ -31,11 +31,11 @@ func StartPoller(db *sql.DB) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	log.Printf("🕐 [Poller] Started — polling every %s", interval)
+	log.Printf(" [Poller] Started — polling every %s", interval)
 
 	for range ticker.C {
 		if err := pollAndEnqueue(db); err != nil {
-			log.Printf("⚠️  [Poller] poll error: %v", err)
+			log.Printf("  [Poller] poll error: %v", err)
 		}
 	}
 }
@@ -59,7 +59,7 @@ func pollAndEnqueue(db *sql.DB) error {
 		UPDATE posts
 		SET status = 'publishing', 
 			updated_at = NOW(),
-			current_publish_attempt_id = gen_random_uuid() -- 👈 GENERATE IT HERE
+			current_publish_attempt_id = gen_random_uuid() --  GENERATE IT HERE
 		FROM due
 		WHERE posts.id = due.id
 		RETURNING posts.id::text
@@ -75,24 +75,24 @@ func pollAndEnqueue(db *sql.DB) error {
 	for rows.Next() {
 		var postID string
 		if err := rows.Scan(&postID); err != nil {
-			log.Printf("⚠️  [Poller] scan row: %v", err)
+			log.Printf("  [Poller] scan row: %v", err)
 			continue
 		}
 
 		// Push to Redis queue — consumer will BRPOP this
 		if err := utils.RDB.LPush(utils.Ctx, config.C.ScheduledPostsQueue, postID).Err(); err != nil {
-			log.Printf("⚠️  [Poller] enqueue post %s: %v", postID, err)
+			log.Printf("  [Poller] enqueue post %s: %v", postID, err)
 			// Revert status so it will be picked up on the next tick
 			_, _ = db.ExecContext(ctx,
 				`UPDATE posts SET status='scheduled', updated_at=NOW() WHERE id=$1`, postID)
 			continue
 		}
 		enqueued++
-		log.Printf("📤 [Poller] Enqueued post %s", postID)
+		log.Printf(" [Poller] Enqueued post %s", postID)
 	}
 
 	if enqueued > 0 {
-		log.Printf("✅ [Poller] Enqueued %d post(s)", enqueued)
+		log.Printf(" [Poller] Enqueued %d post(s)", enqueued)
 	}
 
 	return rows.Err()

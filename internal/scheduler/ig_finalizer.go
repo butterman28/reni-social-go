@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,19 +22,20 @@ import (
 //
 // Designed to run under the supervisor in cmd/worker/main.go.
 func StartIGContainerFinalizer(db *sql.DB) {
-	log.Println("📸 [IG Finalizer] Started — polling for pending Instagram containers")
+	log.Println(" [IG Finalizer] Started — polling for pending Instagram containers")
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
 		if err := finalizeIGContainers(db); err != nil {
-			log.Printf("⚠️  [IG Finalizer] error: %v", err)
+			log.Printf("  [IG Finalizer] error: %v", err)
 		}
 	}
 }
 
 func finalizeIGContainers(db *sql.DB) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// 10s timeout just for the DB query to fetch pending items
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	rows, err := db.QueryContext(ctx, `
@@ -58,7 +60,7 @@ func finalizeIGContainers(db *sql.DB) error {
 	type pending struct {
 		resultID    string
 		postID      string
-		attemptID   uuid.UUID // <--- Added to struct
+		attemptID   uuid.UUID
 		containerID string
 		accountID   string
 		accessToken string
@@ -68,50 +70,72 @@ func finalizeIGContainers(db *sql.DB) error {
 	for rows.Next() {
 		var p pending
 		var attemptStr string
-		// 👇 Scan the new attemptStr column
 		if err := rows.Scan(&p.resultID, &p.postID, &attemptStr, &p.containerID, &p.accountID, &p.accessToken); err != nil {
-			log.Printf("⚠️  [IG Finalizer] scan: %v", err)
+			log.Printf("  [IG Finalizer] scan: %v", err)
 			continue
 		}
-		p.attemptID, _ = uuid.Parse(attemptStr) // <--- Parse it
+		p.attemptID, _ = uuid.Parse(attemptStr)
 		pendings = append(pendings, p)
 	}
 
-	for _, p := range pendings {
-		status, err := checkIGContainerStatus(ctx, p.containerID, p.accessToken)
-		if err != nil {
-			log.Printf("⚠️  [IG Finalizer] check container %s: %v", p.containerID, err)
-			continue
-		}
-
-		switch status {
-		case "FINISHED":
-			igPostID, err := publishIGContainer(ctx, p.containerID, p.accountID, p.accessToken)
-			if err != nil {
-				log.Printf("❌ [IG Finalizer] publish container %s: %v", p.containerID, err)
-				_ = UpdatePublishResult(ctx, db, p.resultID,
-					ResultFailed, "", "", err.Error())
-			} else {
-				log.Printf("✅ [IG Finalizer] Published IG container %s → post %s", p.containerID, igPostID)
-				_ = UpdatePublishResult(ctx, db, p.resultID,
-					ResultPublished, igPostID, "", "")
-			}
-			// 👇 Fixed: Pass the attemptID
-			_ = FinalizePostStatus(ctx, db, p.postID, p.attemptID)
-
-		case "ERROR", "EXPIRED":
-			log.Printf("❌ [IG Finalizer] Container %s → %s", p.containerID, status)
-			_ = UpdatePublishResult(ctx, db, p.resultID,
-				ResultFailed, "", "", "Instagram container "+status)
-			// 👇 Fixed: Pass the attemptID
-			_ = FinalizePostStatus(ctx, db, p.postID, p.attemptID)
-
-		default:
-			// Still processing — check again next tick
-			log.Printf("⏳ [IG Finalizer] Container %s still %s", p.containerID, status)
-		}
+	if len(pendings) == 0 {
+		return nil
 	}
 
+	// Fan out checks concurrently with a semaphore to prevent hammering the Meta API
+	// and to ensure one slow container doesn't block the others or eat up a shared timeout.
+	sem := make(chan struct{}, 5) // max 5 concurrent IG API calls
+	var wg sync.WaitGroup
+
+	for _, p := range pendings {
+		wg.Add(1)
+		sem <- struct{}{} // acquire slot
+
+		go func(p pending) {
+			defer wg.Done()
+			defer func() { <-sem }() // release slot
+
+			// Each goroutine gets its own fresh context for the external API calls
+			apiCtx, apiCancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer apiCancel()
+
+			status, err := checkIGContainerStatus(apiCtx, p.containerID, p.accessToken)
+			if err != nil {
+				log.Printf("  [IG Finalizer] check container %s: %v", p.containerID, err)
+				return
+			}
+
+			// Use a background context for DB writes so they complete even if apiCtx times out
+			dbCtx := context.Background()
+
+			switch status {
+			case "FINISHED":
+				igPostID, err := publishIGContainer(apiCtx, p.containerID, p.accountID, p.accessToken)
+				if err != nil {
+					log.Printf(" [IG Finalizer] publish container %s: %v", p.containerID, err)
+					//  FIXED: Swapped p.resultID and p.postID to match UpdatePublishResult signature
+					_ = UpdatePublishResult(dbCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultFailed, "", "", err.Error())
+				} else {
+					log.Printf(" [IG Finalizer] Published IG container %s → post %s", p.containerID, igPostID)
+					//  FIXED: Swapped p.resultID and p.postID to match UpdatePublishResult signature
+					_ = UpdatePublishResult(dbCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultPublished, igPostID, "", "")
+				}
+				_ = FinalizePostStatus(dbCtx, db, p.postID, p.attemptID)
+
+			case "ERROR", "EXPIRED":
+				log.Printf(" [IG Finalizer] Container %s → %s", p.containerID, status)
+				//  FIXED: Swapped p.resultID and p.postID to match UpdatePublishResult signature
+				_ = UpdatePublishResult(dbCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultFailed, "", "", "Instagram container "+status)
+				_ = FinalizePostStatus(dbCtx, db, p.postID, p.attemptID)
+
+			default:
+				// Still processing — check again next tick
+				log.Printf(" [IG Finalizer] Container %s still %s", p.containerID, status)
+			}
+		}(p)
+	}
+
+	wg.Wait()
 	return nil
 }
 
@@ -159,6 +183,7 @@ func publishIGContainer(ctx context.Context, containerID, accountID, accessToken
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
+	// Bumped timeout slightly to survive Meta's intentional throttling during bursts
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {

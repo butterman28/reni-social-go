@@ -4,8 +4,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"reni-social/internal/domain"
+	"reni-social/internal/scheduler"
 	"reni-social/pkg/db"
 )
 
@@ -145,10 +147,23 @@ func Schedule(c *fiber.Ctx) error {
 
 // Results handles GET /api/posts/in/:id/results
 // Returns per-platform publish status for the frontend to display.
+// Reads from Redis cache first, falls back to Postgres on cache miss.
 func Results(c *fiber.Ctx) error {
 	postID := c.Params("id")
-	attemptID := c.Query("attempt_id") // Grab the tracking ID from the URL
+	attemptID := c.Query("attempt_id")
 
+	// Fast path: read from Redis cache
+	if attemptID != "" {
+		attUUID, err := uuid.Parse(attemptID)
+		if err == nil {
+			cached := scheduler.ReadCachedResults(postID, attUUID)
+			if cached != nil {
+				return c.JSON(fiber.Map{"results": cached})
+			}
+		}
+	}
+
+	// Fallback: Postgres
 	query := `
 		SELECT id::text, platform, status, platform_post_id, platform_post_url,
 		       container_id, fail_reason, created_at, updated_at
@@ -156,8 +171,6 @@ func Results(c *fiber.Ctx) error {
 		WHERE post_id = $1
 	`
 	args := []any{postID}
-
-	//if the frontend passes the attempt_id, ONLY return rows from this specific click
 	if attemptID != "" {
 		query += " AND publish_attempt_id = $2"
 		args = append(args, attemptID)
@@ -181,7 +194,6 @@ func Results(c *fiber.Ctx) error {
 		CreatedAt      time.Time `json:"created_at"`
 		UpdatedAt      time.Time `json:"updated_at"`
 	}
-
 	var results []resultRow
 	for rows.Next() {
 		var r resultRow
@@ -195,6 +207,5 @@ func Results(c *fiber.Ctx) error {
 		}
 		results = append(results, r)
 	}
-
 	return c.JSON(fiber.Map{"results": results})
 }

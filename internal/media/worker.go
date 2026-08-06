@@ -56,7 +56,7 @@ func EnqueueJob(job MediaJob) error {
 // Designed to run under the supervisor in cmd/worker/main.go.
 // The db parameter is kept for future use (e.g., updating post media URLs after processing).
 func StartMediaWorker(db *sql.DB) {
-	log.Printf("🎬 [Media] Started — listening on queue: %s", config.C.MediaWorkerQueue)
+	log.Printf(" [Media] Started — listening on queue: %s", config.C.MediaWorkerQueue)
 
 	for {
 		result, err := utils.RDB.BRPop(utils.Ctx, 5*time.Second, config.C.MediaWorkerQueue).Result()
@@ -68,7 +68,7 @@ func StartMediaWorker(db *sql.DB) {
 		payload := result[1]
 		var job MediaJob
 		if err := json.Unmarshal([]byte(payload), &job); err != nil {
-			log.Printf("⚠️  [Media] malformed job payload: %v", err)
+			log.Printf("  [Media] malformed job payload: %v", err)
 			continue
 		}
 
@@ -78,7 +78,7 @@ func StartMediaWorker(db *sql.DB) {
 
 // processJob dispatches to the correct processor and logs the result.
 func processJob(job MediaJob) {
-	log.Printf("🎬 [Media] Processing %s for post %s", job.Type, job.PostID)
+	log.Printf(" [Media] Processing %s for post %s", job.Type, job.PostID)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -92,16 +92,16 @@ func processJob(job MediaJob) {
 	case JobImageResize:
 		err = resizeImage(ctx, job.InputPath, job.OutputPath, job.Width, job.Height)
 	default:
-		log.Printf("⚠️  [Media] unknown job type: %s", job.Type)
+		log.Printf("  [Media] unknown job type: %s", job.Type)
 		return
 	}
 
 	if err != nil {
-		log.Printf("❌ [Media] job failed for post %s: %v", job.PostID, err)
+		log.Printf(" [Media] job failed for post %s: %v", job.PostID, err)
 		return
 	}
 
-	log.Printf("✅ [Media] %s complete for post %s → %s", job.Type, job.PostID, job.OutputPath)
+	log.Printf(" [Media] %s complete for post %s → %s", job.Type, job.PostID, job.OutputPath)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
