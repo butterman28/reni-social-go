@@ -49,6 +49,7 @@ func main() {
 			// Deny all other origins
 			return false
 		},
+		AllowOrigins: "http://localhost:5173,http://localhost:5173/,https://renisocial.stories.ng",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Session-ID, timezone, locale, ip",
 		// AllowCredentials: true, // Uncomment this if your frontend sends cookies or auth headers

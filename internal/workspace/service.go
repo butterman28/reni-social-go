@@ -23,7 +23,7 @@ type CreateWorkspaceRequest struct {
 }
 
 type InviteMemberRequest struct {
-	Email string              `json:"email"`
+	Email string               `json:"email"`
 	Role  domain.WorkspaceRole `json:"role"`
 }
 
@@ -376,6 +376,7 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 	`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
 				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
 
+<<<<<<< HEAD
 		case domain.PlatformMetaFB, domain.PlatformMetaIG:
 			_, err = db.DB.ExecContext(ctx, `
 	INSERT INTO meta_connections
@@ -390,6 +391,24 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 	is_deleted    = false
 	`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
 				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+=======
+	fmt.Println("Refresh Token - ", conn.RefreshToken)
+
+	switch conn.Platform {
+	case domain.PlatformLinkedIn:
+		_, err = db.DB.ExecContext(ctx, `
+			INSERT INTO linkedin_connections
+			    (id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+			ON CONFLICT (workspace_id, account_id)
+			DO UPDATE SET
+			    access_token  = EXCLUDED.access_token,
+			    refresh_token = EXCLUDED.refresh_token,
+			    account_name  = EXCLUDED.account_name,
+			    expires_at    = EXCLUDED.expires_at
+		`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
+			conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
+>>>>>>> origin/main
 
 		case domain.PlatformX:
 			_, err = db.DB.ExecContext(ctx, `

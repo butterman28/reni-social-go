@@ -165,7 +165,7 @@ func TestExchangeCode(t *testing.T) {
 	defer func() { tokenURL, meURL = oldTok, oldMe }()
 
 	c := New()
-	conn, err := c.ExchangeCode(context.Background(), "fake-auth-code")
+	conn, err := c.ExchangeCode(context.Background(), "fake-auth-code", "http://localhost:1045/workspaces/connect/linkedin/callback")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

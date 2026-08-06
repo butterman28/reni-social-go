@@ -319,15 +319,10 @@ type ActivateEmailRequest struct {
 }
 
 type ActivateEmailResponse struct {
-	Status     bool              `json:"status"`
-	Message    string            `json:"message"`
-	Data       ActivateEmailData `json:"data"`
-	HttpStatus int               `json:"http_status"`
-}
-
-type ActivateEmailData struct {
-	Mail     string `json:"mail"`
-	AuthCode string `json:"authCode"`
+	Status     bool   `json:"status"`
+	Message    string `json:"message"`
+	Data       any    `json:"data"`
+	HttpStatus int    `json:"http_status"`
 }
 
 func ActivateEmail(ctx context.Context, req ActivateEmailRequest) (*ActivateEmailResponse, error) {
@@ -342,6 +337,7 @@ func ActivateEmail(ctx context.Context, req ActivateEmailRequest) (*ActivateEmai
 		Timeout: 30 * time.Second,
 	}, &res)
 	if err != nil {
+		fmt.Println("err", err.Error())
 		return nil, fmt.Errorf("activate email call failed: %w", err)
 	}
 	return &res, nil
