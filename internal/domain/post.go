@@ -46,4 +46,6 @@ type Post struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	CurrentPublishAttemptID *uuid.UUID //`json:"current_publish_attempt_id"`
+	RetryCount              int        `json:"retry_count"`
+	MaxRetries              int        `json:"max_retries"`
 }

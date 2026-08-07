@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
-
+	"log"
 	"reni-social/internal/utils"
+	"reni-social/pkg/config"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -159,6 +160,30 @@ func FinalizePostStatus(ctx context.Context, db *sql.DB, postID string, attemptI
 			SELECT fail_reason FROM publish_results
 			WHERE post_id=$1 AND status='failed' LIMIT 1
 		`, postID).Scan(&reason)
+
+		var retryCount, maxRetries int
+		pErr := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
+		if pErr == nil && retryCount < maxRetries {
+			newAttemptID := uuid.New()
+			newRetryCount := retryCount + 1
+			log.Printf("🔄 [Scheduler] Retrying post %s (attempt %d/%d) after platform failure: %s", postID, newRetryCount, maxRetries, reason)
+
+			_, updateErr := db.ExecContext(ctx, `
+				UPDATE posts
+				SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
+				WHERE id = $4
+			`, newRetryCount, newAttemptID, reason, postID)
+			if updateErr != nil {
+				return updateErr
+			}
+
+			if enqueueErr := utils.RDB.LPush(utils.Ctx, config.C.ScheduledPostsQueue, postID).Err(); enqueueErr != nil {
+				log.Printf("⚠️  [Scheduler] Failed to re-enqueue post %s for retry: %v", postID, enqueueErr)
+			} else {
+				return nil
+			}
+		}
+
 		_, err = db.ExecContext(ctx, `
 			UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW()
 			WHERE id=$2

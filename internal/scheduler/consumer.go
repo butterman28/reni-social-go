@@ -73,7 +73,29 @@ func publishPost(db *sql.DB, postID string) {
 	perPlatformTimeout := time.Duration(config.C.PublishTimeoutMinutes) * time.Minute
 
 	var wg sync.WaitGroup
+
+	// Check platforms that have already succeeded across previous attempts to avoid duplicate posts
+	publishedPlatforms := make(map[string]bool)
+	pRows, pErr := db.QueryContext(dbCtx, `
+		SELECT DISTINCT platform FROM publish_results
+		WHERE post_id = $1 AND status = 'published'
+	`, postID)
+	if pErr == nil {
+		defer pRows.Close()
+		for pRows.Next() {
+			var pStr string
+			if err := pRows.Scan(&pStr); err == nil {
+				publishedPlatforms[pStr] = true
+			}
+		}
+	}
+
 	for _, conn := range connections {
+		if publishedPlatforms[string(conn.Platform)] {
+			log.Printf("ℹ️  [Consumer] Platform %s already published for post %s — skipping retry", conn.Platform, postID)
+			continue
+		}
+
 		conn := conn
 		adapter := adapterForPlatform(conn.Platform)
 		if adapter == nil {
@@ -143,7 +165,8 @@ func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, er
 	err := db.QueryRowContext(ctx, `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
 		       article_url, article_title, current_publish_attempt_id,
-		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
+		       status, scheduled_at, published_at, fail_reason, created_at, updated_at,
+		       retry_count, max_retries
 		FROM posts WHERE id = $1
 	`, postID).Scan(
 		&p.ID, &p.WorkspaceID, &p.AuthorID, &p.Content,
@@ -153,6 +176,7 @@ func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, er
 		&p.ScheduledAt, &p.PublishedAt,
 		&failReason,
 		&p.CreatedAt, &p.UpdatedAt,
+		&p.RetryCount, &p.MaxRetries,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("fetch post: %w", err)
@@ -262,7 +286,30 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 }
 
 func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) error {
-	_, err := db.ExecContext(ctx,
+	var retryCount, maxRetries int
+	err := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
+	if err == nil && retryCount < maxRetries {
+		newAttemptID := uuid.New()
+		newRetryCount := retryCount + 1
+		log.Printf("🔄 [Consumer] Retrying post %s (attempt %d/%d) due to error: %s", postID, newRetryCount, maxRetries, reason)
+
+		_, updateErr := db.ExecContext(ctx, `
+			UPDATE posts
+			SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
+			WHERE id = $4
+		`, newRetryCount, newAttemptID, reason, postID)
+		if updateErr != nil {
+			return updateErr
+		}
+
+		if enqueueErr := utils.RDB.LPush(utils.Ctx, config.C.ScheduledPostsQueue, postID).Err(); enqueueErr != nil {
+			log.Printf("⚠️  [Consumer] Failed to re-enqueue post %s for retry: %v", postID, enqueueErr)
+		} else {
+			return nil
+		}
+	}
+
+	_, err = db.ExecContext(ctx,
 		`UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW() WHERE id=$2`,
 		reason, postID)
 	return err
