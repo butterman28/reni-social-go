@@ -12,6 +12,15 @@ import (
 )
 
 // Create handles POST /api/posts
+// Create godoc
+// @Summary POST /api/in/posts
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/posts [post]
 func Create(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 
@@ -50,6 +59,17 @@ func List(c *fiber.Ctx) error {
 }
 
 // Get handles GET /api/posts/:id
+// Get godoc
+// @Summary GET /api/in/posts/in/:id
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param workspace_id query string true "Workspace ID"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/posts/in/{id} [get]
 func Get(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
@@ -87,6 +107,16 @@ func Update(c *fiber.Ctx) error {
 }
 
 // Delete handles DELETE /api/posts/:id
+// Delete godoc
+// @Summary DELETE /api/in/posts/in/:id
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/posts/in/{id} [delete]
 func Delete(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
@@ -123,6 +153,16 @@ func Publish(c *fiber.Ctx) error {
 }
 
 // Schedule handles POST /api/posts/:id/schedule
+// Schedule godoc
+// @Summary POST /api/in/posts/in/:id/schedule
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/posts/in/{id}/schedule [post]
 func Schedule(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
@@ -148,6 +188,17 @@ func Schedule(c *fiber.Ctx) error {
 // Results handles GET /api/posts/in/:id/results
 // Returns per-platform publish status for the frontend to display.
 // Reads from Redis cache first, falls back to Postgres on cache miss.
+// Results godoc
+// @Summary GET /api/in/posts/in/:id/results
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param attempt_id query string true "Publish attempt ID"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/posts/in/{id}/results [get]
 func Results(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	attemptID := c.Query("attempt_id")

@@ -480,6 +480,16 @@ func GetXConnection(ctx context.Context, workspaceID, connectionID string) (*dom
 
 // ListXConnections handles GET /api/workspaces/in/:id/x/connections
 // Returns all connected X accounts for the workspace (no access tokens).
+// ListXConnections godoc
+// @Summary GET /api/in/workspaces/in/:id/x/connections
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/x/connections [get]
 func ListXConnections(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")

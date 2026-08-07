@@ -18,6 +18,19 @@ import (
 	"reni-social/pkg/db"
 )
 
+// @title Reni Social API
+// @version 1.0
+// @description Reni Social backend API
+// @BasePath /
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+//
+// @securityDefinitions.apikey SessionId
+// @in header
+// @name X-Session-Id
+
 func main() {
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect() // connect to DB
