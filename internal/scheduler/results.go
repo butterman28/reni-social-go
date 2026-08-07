@@ -3,11 +3,12 @@ package scheduler
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
-
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -22,9 +23,63 @@ const (
 	ResultFailed     PublishResultStatus = "failed"
 )
 
-// InsertPublishResult creates one row per platform attempt.
+// resultsCacheKey returns the Redis key for a given post+attempt.
+func resultsCacheKey(postID string, attemptID uuid.UUID) string {
+	return fmt.Sprintf("results:%s:%s", postID, attemptID.String())
+}
+
+// resultsCacheTTL is how long results stay in Redis (2 hours).
+const resultsCacheTTL = 2 * time.Hour
+
+// CacheResultEntry is the JSON shape stored in Redis per platform result.
+type CacheResultEntry struct {
+	ID             string `json:"id"`
+	Platform       string `json:"platform"`
+	Status         string `json:"status"`
+	PlatformPostID string `json:"platform_post_id"`
+	PlatformURL    string `json:"platform_post_url"`
+	ContainerID    string `json:"container_id"`
+	FailReason     string `json:"fail_reason"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// cacheResult writes a single result entry into the Redis hash for this post+attempt.
+func cacheResult(postID string, attemptID uuid.UUID, entry CacheResultEntry) {
+	key := resultsCacheKey(postID, attemptID)
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return
+	}
+	pipe := utils.RDB.TxPipeline()
+	pipe.HSet(utils.Ctx, key, entry.Platform, data)
+	pipe.Expire(utils.Ctx, key, resultsCacheTTL)
+	_, _ = pipe.Exec(utils.Ctx)
+}
+
+// ReadCachedResults reads all cached results for a post+attempt from Redis.
+// Returns nil if nothing is cached (caller should fall back to Postgres).
+func ReadCachedResults(postID string, attemptID uuid.UUID) []CacheResultEntry {
+	key := resultsCacheKey(postID, attemptID)
+	vals, err := utils.RDB.HVals(utils.Ctx, key).Result()
+	if err != nil || len(vals) == 0 {
+		return nil
+	}
+	results := make([]CacheResultEntry, 0, len(vals))
+	for _, v := range vals {
+		var entry CacheResultEntry
+		if err := json.Unmarshal([]byte(v), &entry); err != nil {
+			continue
+		}
+		results = append(results, entry)
+	}
+	return results
+}
+
+// InsertPublishResult creates one row per platform attempt and caches it.
 func InsertPublishResult(ctx context.Context, db *sql.DB, postID string, attemptID uuid.UUID, platform string, connID uuid.UUID, status PublishResultStatus, platformPostID, platformURL, containerID, failReason string) error {
 	id := uuid.New()
+	now := time.Now()
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO publish_results
 			(id, post_id, publish_attempt_id, platform, connection_id, status,
@@ -33,19 +88,49 @@ func InsertPublishResult(ctx context.Context, db *sql.DB, postID string, attempt
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
 	`, id, postID, attemptID, platform, connID, string(status),
 		platformPostID, platformURL, containerID, failReason)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Write-through to Redis cache
+	cacheResult(postID, attemptID, CacheResultEntry{
+		ID:             id.String(),
+		Platform:       platform,
+		Status:         string(status),
+		PlatformPostID: platformPostID,
+		PlatformURL:    platformURL,
+		ContainerID:    containerID,
+		FailReason:     failReason,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	})
+	return nil
 }
 
-
-// UpdatePublishResult flips a row to published or failed.
-func UpdatePublishResult(ctx context.Context, db *sql.DB, resultID string, status PublishResultStatus, platformPostID, platformURL, failReason string) error {
+// UpdatePublishResult flips a row to published or failed and updates cache.
+func UpdatePublishResult(ctx context.Context, db *sql.DB, resultID string, postID string, attemptID uuid.UUID, platform string, status PublishResultStatus, platformPostID, platformURL, failReason string) error {
+	now := time.Now()
 	_, err := db.ExecContext(ctx, `
 		UPDATE publish_results
 		SET status=$1, platform_post_id=$2, platform_post_url=$3,
-		    fail_reason=$4, updated_at=NOW()
+			fail_reason=$4, updated_at=NOW()
 		WHERE id=$5
 	`, string(status), platformPostID, platformURL, failReason, resultID)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Write-through to Redis cache
+	cacheResult(postID, attemptID, CacheResultEntry{
+		ID:             resultID,
+		Platform:       platform,
+		Status:         string(status),
+		PlatformPostID: platformPostID,
+		PlatformURL:    platformURL,
+		FailReason:     failReason,
+		UpdatedAt:      now,
+	})
+	return nil
 }
 
 // FinalizePostStatus checks publish_results and updates the parent post's
@@ -54,25 +139,21 @@ func FinalizePostStatus(ctx context.Context, db *sql.DB, postID string, attemptI
 	var total, done, failed int
 	err := db.QueryRowContext(ctx, `
 		SELECT
-			COUNT(*)                                           AS total,
+			COUNT(*)                                               AS total,
 			COUNT(*) FILTER (WHERE status IN ('published','failed')) AS done,
-			COUNT(*) FILTER (WHERE status = 'failed')          AS failed
+			COUNT(*) FILTER (WHERE status = 'failed')              AS failed
 		FROM publish_results
-		WHERE post_id = $1 AND publish_attempt_id = $2  -- 👈 SCOPED TO THIS ATTEMPT
+		WHERE post_id = $1 AND publish_attempt_id = $2
 	`, postID, attemptID).Scan(&total, &done, &failed)
 	if err != nil {
 		return fmt.Errorf("check results for post %s: %w", postID, err)
 	}
-
 	if total == 0 {
-		return nil // No platforms were attempted
-	}
-
-	if total != done {
-		// At least one platform is still processing — leave post as 'publishing'
 		return nil
 	}
-
+	if total != done {
+		return nil
+	}
 	if failed > 0 {
 		var reason string
 		_ = db.QueryRowContext(ctx, `
@@ -109,8 +190,6 @@ func FinalizePostStatus(ctx context.Context, db *sql.DB, postID string, attemptI
 		`, reason, postID)
 		return err
 	}
-
-	// All platforms published successfully
 	_, err = db.ExecContext(ctx, `
 		UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW()
 		WHERE id=$1

@@ -22,9 +22,9 @@ func RunXTest() {
 	fmt.Println("STEP 1: Fetching request token...")
 	oauthToken, authURL, err := client.RequestToken(ctx, "")
 	if err != nil {
-		log.Fatalf("❌ RequestToken failed: %v", err)
+		log.Fatalf(" RequestToken failed: %v", err)
 	}
-	fmt.Println("✅ Got request token.")
+	fmt.Println(" Got request token.")
 	fmt.Println("=================================================================")
 	fmt.Println("STEP 2: Open this URL in your browser and approve the app:")
 	fmt.Println(authURL)
@@ -76,20 +76,20 @@ func RunXTest() {
 	select {
 	case returnedToken = <-tokenCh:
 		verifier = <-verifierCh
-		fmt.Println("✅ Received oauth_token and oauth_verifier.")
+		fmt.Println(" Received oauth_token and oauth_verifier.")
 	case err := <-errCh:
-		log.Fatalf("❌ OAuth callback error: %v", err)
+		log.Fatalf(" OAuth callback error: %v", err)
 	case <-time.After(3 * time.Minute):
-		log.Fatal("❌ Timed out waiting for X redirect (3 min).")
+		log.Fatal(" Timed out waiting for X redirect (3 min).")
 	}
 	_ = server.Close()
 
 	fmt.Println("\nSTEP 3: Exchanging verifier for access token...")
 	conn, err := client.ExchangeVerifier(ctx, returnedToken, verifier)
 	if err != nil {
-		log.Fatalf("❌ ExchangeVerifier failed: %v", err)
+		log.Fatalf(" ExchangeVerifier failed: %v", err)
 	}
-	fmt.Printf("✅ Connected as: %s (%s)\n", conn.AccountName, conn.AccountID)
+	fmt.Printf(" Connected as: %s (%s)\n", conn.AccountName, conn.AccountID)
 	fmt.Printf("   Access token (truncated): %s...\n", truncate(conn.AccessToken, 12))
 	fmt.Printf("   Access secret (truncated): %s...\n", truncate(conn.RefreshToken, 12))
 
@@ -101,8 +101,8 @@ func RunXTest() {
 		fmt.Println("Publishing tweet...")
 		result, err := client.Publish(ctx, post, conn)
 		if err != nil {
-			log.Printf("❌ Publish (text) failed: %v", err)
-			fmt.Println("⚠️  Skipping STEP 6 auto-fetch since no tweet was published.")
+			log.Printf(" Publish (text) failed: %v", err)
+			fmt.Println("  Skipping STEP 6 auto-fetch since no tweet was published.")
 		} else {
 			printResult(result)
 			publishedTweetID = result.PlatformPostID
@@ -117,9 +117,9 @@ func RunXTest() {
 		fmt.Println("Fetching user profile...")
 		userData, err := client.GetUser(ctx, conn, conn.AccountID, params)
 		if err != nil {
-			log.Printf("❌ GetUser failed: %v", err)
+			log.Printf(" GetUser failed: %v", err)
 		} else {
-			fmt.Println("✅ Fetched User Profile:")
+			fmt.Println(" Fetched User Profile:")
 			printJSON(userData)
 		}
 	}
@@ -133,9 +133,9 @@ func RunXTest() {
 			fmt.Println("Fetching tweet with media/poll/place expansions...")
 			tweetData, err := client.GetTweetWithIncludes(ctx, conn, publishedTweetID)
 			if err != nil {
-				log.Printf("❌ GetTweetWithIncludes failed: %v", err)
+				log.Printf(" GetTweetWithIncludes failed: %v", err)
 			} else {
-				fmt.Println("✅ Fetched Tweet with Includes:")
+				fmt.Println(" Fetched Tweet with Includes:")
 				printJSON(tweetData)
 			}
 		}
@@ -151,9 +151,9 @@ func RunXTest() {
 			fmt.Println("Fetching space...")
 			spaceData, err := client.GetSpace(ctx, conn, spaceID, params)
 			if err != nil {
-				log.Printf("❌ GetSpace failed: %v", err)
+				log.Printf(" GetSpace failed: %v", err)
 			} else {
-				fmt.Println("✅ Fetched Space:")
+				fmt.Println(" Fetched Space:")
 				printJSON(spaceData)
 			}
 		} else {
@@ -169,9 +169,9 @@ func RunXTest() {
 			fmt.Println("Fetching list...")
 			listData, err := client.GetList(ctx, conn, listID, params)
 			if err != nil {
-				log.Printf("❌ GetList failed: %v", err)
+				log.Printf(" GetList failed: %v", err)
 			} else {
-				fmt.Println("✅ Fetched List:")
+				fmt.Println(" Fetched List:")
 				printJSON(listData)
 			}
 		} else {

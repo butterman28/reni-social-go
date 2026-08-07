@@ -23,6 +23,15 @@ import (
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Create handles POST /api/workspaces
+// Create godoc
+// @Summary POST /api/in/workspaces
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces [post]
 func Create(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 
@@ -50,6 +59,16 @@ func Create(c *fiber.Ctx) error {
 }
 
 // GetOne handles GET /api/workspaces/in/:id
+// GetOne godoc
+// @Summary GET /api/in/workspaces/in/:id
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id} [get]
 func GetOne(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -70,6 +89,16 @@ func GetOne(c *fiber.Ctx) error {
 }
 
 // GetOneBySlug handles GET /api/workspaces/in/slug/:slug
+// GetOneBySlug godoc
+// @Summary GET /api/in/workspaces/in/slug/:slug
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param slug path string true "slug"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/slug/{slug} [get]
 func GetOneBySlug(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	slug := c.Params("slug")
@@ -90,6 +119,15 @@ func GetOneBySlug(c *fiber.Ctx) error {
 }
 
 // ListMine handles GET /api/workspaces
+// ListMine godoc
+// @Summary GET /api/in/workspaces
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces [get]
 func ListMine(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 
@@ -113,6 +151,16 @@ func ListMine(c *fiber.Ctx) error {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Invite handles POST /api/workspaces/in/:id/members
+// Invite godoc
+// @Summary POST /api/in/workspaces/in/:id/members
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/members [post]
 func Invite(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -149,6 +197,16 @@ func Invite(c *fiber.Ctx) error {
 }
 
 // Members handles GET /api/workspaces/in/:id/members
+// Members godoc
+// @Summary GET /api/in/workspaces/in/:id/members
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/members [get]
 func Members(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -169,6 +227,17 @@ func Members(c *fiber.Ctx) error {
 }
 
 // RemoveMemberHandler handles DELETE /api/workspaces/in/:id/members/:userId
+// RemoveMemberHandler godoc
+// @Summary DELETE /api/in/workspaces/in/:id/members/in/:userId
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param userId path string true "userId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/members/in/{userId} [delete]
 func RemoveMemberHandler(c *fiber.Ctx) error {
 	callerID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -192,6 +261,16 @@ func RemoveMemberHandler(c *fiber.Ctx) error {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Connections handles GET /api/workspaces/in/:id/connections
+// Connections godoc
+// @Summary GET /api/in/workspaces/in/:id/connections
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/connections [get]
 func Connections(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -213,6 +292,17 @@ func Connections(c *fiber.Ctx) error {
 
 
 // ConnectPlatform handles POST /api/workspaces/in/:id/connect/:platform
+// ConnectPlatform godoc
+// @Summary POST /api/in/workspaces/in/:id/connect/in/:platform
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param platform path string true "platform"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/connect/in/{platform} [post]
 func ConnectPlatform(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -281,6 +371,14 @@ func ConnectPlatform(c *fiber.Ctx) error {
 }
 
 // OAuthCallback handles GET /api/workspaces/in/:id/connect/:platform/callback
+// OAuthCallback godoc
+// @Summary GET /api/workspaces/connect/:platform/callback
+// @Tags workspace
+// @Produce json
+// @Param platform path string true "platform"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/workspaces/connect/{platform}/callback [get]
 func OAuthCallback(c *fiber.Ctx) error {
 	p := c.Params("platform")
 	code := c.Query("code")
@@ -349,6 +447,17 @@ func OAuthCallback(c *fiber.Ctx) error {
 	return c.Redirect(redirectBase + "?tab=accounts&connected=" + p)
 }
 // Disconnect handles DELETE /api/workspaces/in/:id/connections/:connectionId
+// Disconnect godoc
+// @Summary DELETE /api/in/workspaces/in/:id/connections/:connectionId
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param connectionId path string true "connectionId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/connections/{connectionId} [delete]
 func Disconnect(c *fiber.Ctx) error {
 	callerID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -372,6 +481,17 @@ func Disconnect(c *fiber.Ctx) error {
 
 // GetXTweet handles GET /api/workspaces/in/:id/x/tweets/:tweetId
 // Optional query params are passed through as tweet.fields / expansions etc.
+// GetXTweet godoc
+// @Summary GET /api/in/workspaces/in/:id/x/tweets/in/:tweetId
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param tweetId path string true "tweetId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/x/tweets/in/{tweetId} [get]
 func GetXTweet(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -410,6 +530,17 @@ func GetXTweet(c *fiber.Ctx) error {
 
 // GetXTweetWithIncludes handles GET /api/workspaces/in/:id/x/tweets/:tweetId/full
 // Fixed rich-expansion endpoint (media, polls, places, author) — no custom fields needed.
+// GetXTweetWithIncludes godoc
+// @Summary GET /api/in/workspaces/in/:id/x/tweets/in/:tweetId/full
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param tweetId path string true "tweetId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/x/tweets/in/{tweetId}/full [get]
 func GetXTweetWithIncludes(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -443,6 +574,17 @@ func GetXTweetWithIncludes(c *fiber.Ctx) error {
 }
 
 // GetXUser handles GET /api/workspaces/in/:id/x/users/:userId
+// GetXUser godoc
+// @Summary GET /api/in/workspaces/in/:id/x/users/in/:userId
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param userId path string true "userId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/x/users/in/{userId} [get]
 func GetXUser(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -484,6 +626,17 @@ func GetXUser(c *fiber.Ctx) error {
 }
 
 // GetXSpace handles GET /api/workspaces/in/:id/x/spaces/:spaceId
+// GetXSpace godoc
+// @Summary GET /api/in/workspaces/in/:id/x/spaces/in/:spaceId
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param spaceId path string true "spaceId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/x/spaces/in/{spaceId} [get]
 func GetXSpace(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")
@@ -525,6 +678,17 @@ func GetXSpace(c *fiber.Ctx) error {
 }
 
 // GetXList handles GET /api/workspaces/in/:id/x/lists/:listId
+// GetXList godoc
+// @Summary GET /api/in/workspaces/in/:id/x/lists/in/:listId
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Param listId path string true "listId"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/x/lists/in/{listId} [get]
 func GetXList(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	wsID := c.Params("id")

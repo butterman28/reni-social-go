@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	// 1️⃣ Connect to PostgreSQL
+	//  Connect to PostgreSQL
 	os.Setenv("DBURL", config.C.DBURL)
 	db.Connect()
 	defer db.DB.Close()
@@ -30,10 +30,10 @@ func main() {
 
 	log.Println("[MAIN] Starting schema synchronization...")
 
-	// 3️⃣ Sync public tables first (includes organizations)
+	//  Sync public tables first (includes organizations)
 	if err := migrator.SyncPublicTables(db.DB); err != nil {
 		log.Fatal("[SYNC] Failed to sync public tables:", err)
 	}
 
-	log.Println("✅ All schemas are up-to-date")
+	log.Println(" All schemas are up-to-date")
 }

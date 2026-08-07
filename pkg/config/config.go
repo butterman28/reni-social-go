@@ -67,12 +67,15 @@ type Config struct {
 	// ──────────────────────────────────────────
 	SchedulerPollIntervalSecs int    // e.g. 30
 	ScheduledPostsQueue       string // Redis key, e.g. "social:post_queue"
+	MaxConcurrentPublishes    int    
+	PublishTimeoutMinutes     int  
 
 	// ──────────────────────────────────────────
 	// Media Worker
 	// ──────────────────────────────────────────
 	MediaWorkerQueue string // Redis key, e.g. "social:media_jobs"
 	FFmpegPath       string // e.g. "/usr/bin/ffmpeg"
+	  
 	// ──────────────────────────────────────────
 	// Notifications (email/SMS)
 	// ──────────────────────────────────────────

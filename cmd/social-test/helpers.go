@@ -27,7 +27,7 @@ func promptInput(prompt string) string {
 }
 
 func printResult(result *platform.PublishResult) {
-	fmt.Println("✅ Published successfully!")
+	fmt.Println(" Published successfully!")
 	fmt.Printf("   Platform Post ID: %s\n", result.PlatformPostID)
 	if result.URL != "" {
 		fmt.Printf("   URL: %s\n", result.URL)

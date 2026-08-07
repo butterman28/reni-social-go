@@ -28,9 +28,9 @@ func InitRedis() {
 
 	_, err := RDB.Ping(Ctx).Result()
 	if err != nil {
-		log.Fatalf("❌ Failed to connect to Redis at %s: %v", addr, err)
+		log.Fatalf(" Failed to connect to Redis at %s: %v", addr, err)
 	}
-	log.Println("✅ Connected to Redis at", addr)
+	log.Println(" Connected to Redis at", addr)
 }
 
 func SetSession(token string, userID uuid.UUID, ttl time.Duration) error {

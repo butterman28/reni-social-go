@@ -21,7 +21,7 @@ const metaTestLocalPort = "1045"
 func RunMetaTest() {
 	redirectURL := config.C.InstagramRedirectURL
 	if redirectURL == "" || config.C.InstagramAppID == "" {
-		log.Fatal("❌ INSTAGRAM_APP_ID / INSTAGRAM_REDIRECT_URL not set — check your .env")
+		log.Fatal(" INSTAGRAM_APP_ID / INSTAGRAM_REDIRECT_URL not set — check your .env")
 	}
 	state := "meta-test-state"
 
@@ -74,11 +74,11 @@ func RunMetaTest() {
 	var code string
 	select {
 	case code = <-codeCh:
-		fmt.Println("✅ Received authorization code.")
+		fmt.Println(" Received authorization code.")
 	case err := <-errCh:
-		log.Fatalf("❌ OAuth callback error: %v", err)
+		log.Fatalf(" OAuth callback error: %v", err)
 	case <-time.After(3 * time.Minute):
-		log.Fatal("❌ Timed out waiting for Instagram redirect (3 min).")
+		log.Fatal(" Timed out waiting for Instagram redirect (3 min).")
 	}
 	_ = server.Close()
 
@@ -88,9 +88,9 @@ func RunMetaTest() {
 	fmt.Println("\nSTEP 2: Exchanging code for token + resolving account...")
 	conn, err := client.ExchangeInstagramLoginCode(ctx, code)
 	if err != nil {
-		log.Fatalf("❌ ExchangeInstagramLoginCode failed: %v", err)
+		log.Fatalf(" ExchangeInstagramLoginCode failed: %v", err)
 	}
-	fmt.Printf("✅ Connected as: %s (IG user id: %s)\n", conn.AccountName, conn.AccountID)
+	fmt.Printf(" Connected as: %s (IG user id: %s)\n", conn.AccountName, conn.AccountID)
 	fmt.Printf("   Access token (truncated): %s...\n", truncate(conn.AccessToken, 12))
 	if conn.ExpiresAt != nil {
 		fmt.Printf("   Expires at: %s\n", conn.ExpiresAt.Format(time.RFC1123))
@@ -104,7 +104,7 @@ func RunMetaTest() {
 		fmt.Println("Creating container + polling + publishing...")
 		result, err := client.PublishInstagramLogin(ctx, post, conn)
 		if err != nil {
-			log.Fatalf("❌ PublishInstagramLogin failed: %v", err)
+			log.Fatalf(" PublishInstagramLogin failed: %v", err)
 		}
 		printResult(result)
 	} else {
