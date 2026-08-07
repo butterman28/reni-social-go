@@ -12,9 +12,9 @@ import (
 	"reni-social/internal/platform/linkedin"
 	"reni-social/internal/platform/meta"
 	xplatform "reni-social/internal/platform/x"
+	"reni-social/internal/utils"
+	"reni-social/pkg/config"
 	"reni-social/pkg/db"
-
-	"reni-social/internal/scheduler"
 
 	"github.com/google/uuid"
 )
@@ -144,7 +144,8 @@ func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, err
 	query := `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
 		       article_url, article_title, current_publish_attempt_id,
-		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
+		       status, scheduled_at, published_at, fail_reason, created_at, updated_at,
+		       retry_count, max_retries
 		FROM posts
 		WHERE id = $1 AND workspace_id = $2
 	`
@@ -169,7 +170,8 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 	query := fmt.Sprintf(`
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
 		       article_url, article_title, current_publish_attempt_id,
-		       status, scheduled_at, published_at, fail_reason, created_at, updated_at
+		       status, scheduled_at, published_at, fail_reason, created_at, updated_at,
+		       retry_count, max_retries
 		FROM posts %s
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -284,8 +286,7 @@ func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt t
 	return err
 }
 
-// PublishNow immediately dispatches a post to all its platforms.
-// This is called directly from the HTTP handler, bypassing the scheduler queue.
+// PublishNow enqueues a post to Redis for asynchronous publishing by the background worker.
 func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, error) {
 	post, err := GetPost(ctx, postID, workspaceID)
 	if err != nil {
@@ -295,7 +296,7 @@ func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, err
 		return uuid.Nil, fmt.Errorf("post is already published or being published")
 	}
 
-	//1. Generate the Idempotency Key for this specific button click
+	// 1. Generate the Idempotency Key for this specific button click
 	attemptID := uuid.New()
 
 	_, err = db.DB.ExecContext(ctx,
@@ -305,45 +306,17 @@ func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, err
 		return uuid.Nil, err
 	}
 
-	connections, err := loadConnections(ctx, workspaceID, post.Platforms)
-	if err != nil {
-		_ = markFailed(ctx, postID, err.Error())
-		return uuid.Nil, err
+	// 2. Enqueue the post to the Redis queue for the worker to publish it asynchronously
+	if err := utils.RDB.LPush(ctx, config.C.ScheduledPostsQueue, postID).Err(); err != nil {
+		// Revert status on failure
+		_, _ = db.DB.ExecContext(ctx,
+			`UPDATE posts SET status=$1, current_publish_attempt_id=NULL, updated_at=NOW() WHERE id=$2`,
+			post.Status, postID)
+		return uuid.Nil, fmt.Errorf("enqueue post: %w", err)
 	}
-
-	//2. Fan out to platforms and log the immediate results
-	for _, conn := range connections {
-		adapter := adapterFor(conn.Platform)
-		if adapter == nil {
-			continue
-		}
-
-		result, pubErr := adapter.Publish(ctx, post, conn)
-
-		if pubErr != nil {
-			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID,
-				scheduler.ResultFailed, "", "", "", pubErr.Error())
-			continue
-		}
-
-		if result != nil && result.Pending {
-			// Instagram video: save as processing, the Finalizer worker will finish it
-			_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID,
-				scheduler.ResultProcessing, "", "", result.ContainerID, "")
-			continue
-		}
-
-		// LinkedIn/X: Synchronous success
-		_ = scheduler.InsertPublishResult(ctx, db.DB, postID, attemptID, string(conn.Platform), conn.ID,
-			scheduler.ResultPublished, result.PlatformPostID, result.URL, "", "")
-	}
-
-	//3. Let the shared finalizer check if everything is done, or if we are still waiting on async
-	_ = scheduler.FinalizePostStatus(ctx, db.DB, postID, attemptID)
 
 	return attemptID, nil
 }
-//		return scheduler.FinalizePostStatus(ctx, db.DB, postID)
 // ──────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ──────────────────────────────────────────────────────────────────────────────
@@ -478,11 +451,12 @@ func scanPostFromScanner(s scannable) (*domain.Post, error) {
 	err := s.Scan(
 		&p.ID, &p.WorkspaceID, &p.AuthorID, &p.Content,
 		&mediaJSON, &platformJSON,
-		&articleURL, &articleTitle, &attemptIDStr, // <--- 15th argument added here
+		&articleURL, &articleTitle, &attemptIDStr,
 		&status,
 		&p.ScheduledAt, &p.PublishedAt, 
 		&failReason,              
 		&p.CreatedAt, &p.UpdatedAt,
+		&p.RetryCount, &p.MaxRetries,
 	)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("post not found")

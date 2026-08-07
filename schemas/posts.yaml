@@ -57,6 +57,14 @@ columns:
   current_publish_attempt_id:
     type: uuid
     not_null: false
+  retry_count:
+    type: integer
+    not_null: true
+    default: 0
+  max_retries:
+    type: integer
+    not_null: true
+    default: 3
   
 indexes:
   - name: idx_posts_workspace_id
