@@ -2,16 +2,20 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strings" // <-- Added for HasPrefix
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 
+	"reni-social/internal/middleware"
 	"reni-social/internal/routes"
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
@@ -46,6 +50,9 @@ func main() {
 		TrustedProxies:          []string{"0.0.0.0/0"}, // trust all proxies
 		BodyLimit:               100 * 1024 * 1024,     // Set to 100MB
 	})
+	app.Get("/swagger/*", swagger.HandlerDefault) 
+
+	log.Fatal(app.Listen(":3000"))
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{
@@ -69,6 +76,8 @@ func main() {
 	}))
 
 	app.Use(recover.New())
+	// Apply global rate limiting (e.g., max 60 requests/minute per client)
+    app.Use(middleware.RedisRateLimiter(300, 1*time.Minute))
 	app.Options("/*", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNoContent)
 	})

@@ -12,6 +12,17 @@ import (
 // UserMiddleware validates the session token and loads the authenticated userID.
 // It is identical to AuthMiddleware but kept separate so it can be composed
 // into workspace-scoped route groups.
+// UserMiddleware godoc
+// @Summary UserMiddleware
+// @Description Auto-generated thorough documentation for UserMiddleware
+// @Tags middleware
+// @Produce json
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func UserMiddleware(c *fiber.Ctx) error {
 	// --- 1. Validate Authorization header ---
 	authHeader := c.Get("Authorization")

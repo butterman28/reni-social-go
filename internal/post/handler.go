@@ -38,6 +38,21 @@ func Create(c *fiber.Ctx) error {
 }
 
 // List handles GET /api/posts?workspace_id=&status=&page=
+// List godoc
+// @Summary List
+// @Description Auto-generated thorough documentation for List
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param workspace_id query string true "Workspace ID"
+// @Router /api/in/posts [get]
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func List(c *fiber.Ctx) error {
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
@@ -86,6 +101,21 @@ func Get(c *fiber.Ctx) error {
 }
 
 // Update handles PUT /api/posts/:id
+// Update godoc
+// @Summary Update
+// @Description Auto-generated thorough documentation for Update
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Router /api/in/posts/in/{id} [put]
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func Update(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
@@ -132,6 +162,21 @@ func Delete(c *fiber.Ctx) error {
 }
 
 // Publish handles POST /api/posts/:id/publish
+// Publish godoc
+// @Summary Publish
+// @Description Auto-generated thorough documentation for Publish
+// @Tags post
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Router /api/in/posts/in/{id}/publish [post]
+// @Success 201 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func Publish(c *fiber.Ctx) error {
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")

@@ -80,6 +80,19 @@ type Config struct {
 	// Notifications (email/SMS)
 	// ──────────────────────────────────────────
 	NotifyQueue string
+	// ──────────────────────────────────────────
+	// Meta Token Refresher
+	// ──────────────────────────────────────────
+	MetaRefreshCheckIntervalHours int
+	MetaRefreshBeforeDays         int
+	MetaRefreshBatchSize          int
+	MetaRefreshMaxConcurrency     int
+	// ──────────────────────────────────────────
+	// linked reauth refresher 
+	// ──────────────────────────────────────────
+	LinkedInExpiryCheckIntervalHours int
+	LinkedInExpiryWarnBeforeDays     int
+	LinkedInExpiryBatchSize          int
 }
 
 var C *Config

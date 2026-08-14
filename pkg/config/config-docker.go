@@ -78,5 +78,14 @@ func init() {
 		FFmpegPath:       "ffmpeg",
 
 		NotifyQueue: "social:notify_queue_dev",
+		// Meta Token Refresher
+		MetaRefreshCheckIntervalHours: 6,    
+		MetaRefreshBeforeDays:         15,   
+		MetaRefreshBatchSize:          50,   
+		MetaRefreshMaxConcurrency:     5,   
+		// LinkedIn Expiry Monitor
+		LinkedInExpiryCheckIntervalHours: 6,
+		LinkedInExpiryWarnBeforeDays:     7,
+		LinkedInExpiryBatchSize:          50, 
 	}
 }

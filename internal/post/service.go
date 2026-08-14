@@ -55,6 +55,18 @@ type PostFilter struct {
 // CreatePost persists a new post. If ScheduledAt is set, the status is "scheduled";
 // otherwise it is saved as "draft".
 
+// validateArticlePlatforms godoc
+// @Summary validateArticlePlatforms
+// @Description Auto-generated thorough documentation for validateArticlePlatforms
+// @Tags post
+// @Produce json
+// @Param platforms body array true "platforms"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func validateArticlePlatforms(platforms []domain.Platform) error {
 	// validateArticlePlatforms ensures that if an article URL is provided,
 	// the selected platforms actually support link/article shares.
@@ -69,6 +81,19 @@ func validateArticlePlatforms(platforms []domain.Platform) error {
 	return nil
 }
 
+// CreatePost godoc
+// @Summary CreatePost
+// @Description Auto-generated thorough documentation for CreatePost
+// @Tags post
+// @Produce json
+// @Param authorID body string true "authorID"
+// @Param req body string true "req"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*domain.Post, error) {
 	workspaceID, err := uuid.Parse(req.WorkspaceID)
 	if err != nil {
@@ -140,6 +165,18 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 }
 
 // GetPost fetches a single post scoped to a workspace.
+// GetPost godoc
+// @Summary GetPost
+// @Description Auto-generated thorough documentation for GetPost
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, error) {
 	query := `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
@@ -154,6 +191,19 @@ func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, err
 }
 
 // ListPosts returns paginated posts for a workspace, optionally filtered by status.
+// ListPosts godoc
+// @Summary ListPosts
+// @Description Auto-generated thorough documentation for ListPosts
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Param f body string true "f"
+// @Success 200 {array} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.Post, error) {
 	if f.Limit == 0 {
 		f.Limit = 20
@@ -200,6 +250,19 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 
 // UpdatePost modifies a post's content, media, platforms, article fields, or schedule.
 // Only draft and scheduled posts can be updated.
+// UpdatePost godoc
+// @Summary UpdatePost
+// @Description Auto-generated thorough documentation for UpdatePost
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Param req body string true "req"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostRequest) (*domain.Post, error) {
 	existing, err := GetPost(ctx, postID, workspaceID)
 	if err != nil {
@@ -264,6 +327,18 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 }
 
 // DeletePost removes a post from the DB. Only draft/failed/scheduled posts can be deleted.
+// DeletePost godoc
+// @Summary DeletePost
+// @Description Auto-generated thorough documentation for DeletePost
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func DeletePost(ctx context.Context, postID, workspaceID string) error {
 	result, err := db.DB.ExecContext(ctx,
 		`DELETE FROM posts WHERE id=$1 AND workspace_id=$2 AND status NOT IN ('publishing','published')`,
@@ -279,6 +354,19 @@ func DeletePost(ctx context.Context, postID, workspaceID string) error {
 }
 
 // SchedulePost sets or updates the scheduled time for an existing post.
+// SchedulePost godoc
+// @Summary SchedulePost
+// @Description Auto-generated thorough documentation for SchedulePost
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Param scheduledAt body string true "scheduledAt"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time) error {
 	if scheduledAt.Before(time.Now()) {
 		return fmt.Errorf("scheduled_at must be in the future")
@@ -291,6 +379,18 @@ func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt t
 }
 
 // PublishNow enqueues a post to Redis for asynchronous publishing by the background worker.
+// PublishNow godoc
+// @Summary PublishNow
+// @Description Auto-generated thorough documentation for PublishNow
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Success 200 {object} uuid.UUID "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, error) {
 	post, err := GetPost(ctx, postID, workspaceID)
 	if err != nil {
@@ -325,6 +425,14 @@ func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, err
 // Internal helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
+// adapterFor godoc
+// @Summary adapterFor
+// @Description Auto-generated thorough documentation for adapterFor
+// @Tags post
+// @Produce json
+// @Param p body string true "p"
+// @Success 200 {object} platform.Publisher "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func adapterFor(p domain.Platform) platform.Publisher {
 	switch p {
 	case domain.PlatformLinkedIn:
@@ -340,6 +448,19 @@ func adapterFor(p domain.Platform) platform.Publisher {
 // loadConnections, markFailed, scanPost, scanPostRow, scanPostFromScanner...
 // (unchanged except scanPostFromScanner — see below)
 
+// loadConnections godoc
+// @Summary loadConnections
+// @Description Auto-generated thorough documentation for loadConnections
+// @Tags post
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Param platforms body array true "platforms"
+// @Success 200 {object} []domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func loadConnections(ctx context.Context, workspaceID string, platforms []domain.Platform) ([]*domain.PlatformConnection, error) {
 	if len(platforms) == 0 {
 		return nil, nil
@@ -430,6 +551,18 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	return conns, nil
 }
 
+// markFailed godoc
+// @Summary markFailed
+// @Description Auto-generated thorough documentation for markFailed
+// @Tags post
+// @Produce json
+// @Param reason body string true "reason"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func markFailed(ctx context.Context, postID, reason string) error {
 	_, err := db.DB.ExecContext(ctx,
 		`UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW() WHERE id=$2`,
@@ -441,9 +574,45 @@ type scannable interface {
 	Scan(dest ...any) error
 }
 
+// scanPost godoc
+// @Summary scanPost
+// @Description Auto-generated thorough documentation for scanPost
+// @Tags post
+// @Produce json
+// @Param row body object true "row"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func scanPost(row *sql.Row) (*domain.Post, error)    { return scanPostFromScanner(row) }
+// scanPostRow godoc
+// @Summary scanPostRow
+// @Description Auto-generated thorough documentation for scanPostRow
+// @Tags post
+// @Produce json
+// @Param row body object true "row"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func scanPostRow(row *sql.Rows) (*domain.Post, error) { return scanPostFromScanner(row) }
 
+// scanPostFromScanner godoc
+// @Summary scanPostFromScanner
+// @Description Auto-generated thorough documentation for scanPostFromScanner
+// @Tags post
+// @Produce json
+// @Param s body string true "s"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func scanPostFromScanner(s scannable) (*domain.Post, error) {
 	var p domain.Post
 	var mediaJSON, platformJSON []byte

@@ -24,6 +24,15 @@ const (
 )
 
 // resultsCacheKey returns the Redis key for a given post+attempt.
+// resultsCacheKey godoc
+// @Summary resultsCacheKey
+// @Description Auto-generated thorough documentation for resultsCacheKey
+// @Tags scheduler
+// @Produce json
+// @Param postID body string true "postID"
+// @Param attemptID body string true "attemptID"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func resultsCacheKey(postID string, attemptID uuid.UUID) string {
 	return fmt.Sprintf("results:%s:%s", postID, attemptID.String())
 }
@@ -45,6 +54,16 @@ type CacheResultEntry struct {
 }
 
 // cacheResult writes a single result entry into the Redis hash for this post+attempt.
+// cacheResult godoc
+// @Summary cacheResult
+// @Description Auto-generated thorough documentation for cacheResult
+// @Tags scheduler
+// @Produce json
+// @Param postID body string true "postID"
+// @Param attemptID body string true "attemptID"
+// @Param entry body string true "entry"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func cacheResult(postID string, attemptID uuid.UUID, entry CacheResultEntry) {
 	key := resultsCacheKey(postID, attemptID)
 	data, err := json.Marshal(entry)
@@ -59,6 +78,15 @@ func cacheResult(postID string, attemptID uuid.UUID, entry CacheResultEntry) {
 
 // ReadCachedResults reads all cached results for a post+attempt from Redis.
 // Returns nil if nothing is cached (caller should fall back to Postgres).
+// ReadCachedResults godoc
+// @Summary ReadCachedResults
+// @Description Auto-generated thorough documentation for ReadCachedResults
+// @Tags scheduler
+// @Produce json
+// @Param postID body string true "postID"
+// @Param attemptID body string true "attemptID"
+// @Success 200 {array} CacheResultEntry "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ReadCachedResults(postID string, attemptID uuid.UUID) []CacheResultEntry {
 	key := resultsCacheKey(postID, attemptID)
 	vals, err := utils.RDB.HVals(utils.Ctx, key).Result()
@@ -77,6 +105,24 @@ func ReadCachedResults(postID string, attemptID uuid.UUID) []CacheResultEntry {
 }
 
 // InsertPublishResult creates one row per platform attempt and caches it.
+// InsertPublishResult godoc
+// @Summary InsertPublishResult
+// @Description Auto-generated thorough documentation for InsertPublishResult
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param postID body string true "postID"
+// @Param attemptID body string true "attemptID"
+// @Param platform body string true "platform"
+// @Param connID body string true "connID"
+// @Param status body string true "status"
+// @Param failReason body string true "failReason"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func InsertPublishResult(ctx context.Context, db *sql.DB, postID string, attemptID uuid.UUID, platform string, connID uuid.UUID, status PublishResultStatus, platformPostID, platformURL, containerID, failReason string) error {
 	id := uuid.New()
 	now := time.Now()
@@ -108,6 +154,24 @@ func InsertPublishResult(ctx context.Context, db *sql.DB, postID string, attempt
 }
 
 // UpdatePublishResult flips a row to published or failed and updates cache.
+// UpdatePublishResult godoc
+// @Summary UpdatePublishResult
+// @Description Auto-generated thorough documentation for UpdatePublishResult
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param resultID body string true "resultID"
+// @Param postID body string true "postID"
+// @Param attemptID body string true "attemptID"
+// @Param platform body string true "platform"
+// @Param status body string true "status"
+// @Param failReason body string true "failReason"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func UpdatePublishResult(ctx context.Context, db *sql.DB, resultID string, postID string, attemptID uuid.UUID, platform string, status PublishResultStatus, platformPostID, platformURL, failReason string) error {
 	now := time.Now()
 	_, err := db.ExecContext(ctx, `
@@ -135,6 +199,20 @@ func UpdatePublishResult(ctx context.Context, db *sql.DB, resultID string, postI
 
 // FinalizePostStatus checks publish_results and updates the parent post's
 // status accordingly. Called after every publish_results mutation.
+// FinalizePostStatus godoc
+// @Summary FinalizePostStatus
+// @Description Auto-generated thorough documentation for FinalizePostStatus
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param postID body string true "postID"
+// @Param attemptID body string true "attemptID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func FinalizePostStatus(ctx context.Context, db *sql.DB, postID string, attemptID uuid.UUID) error {
 	var total, done, failed int
 	err := db.QueryRowContext(ctx, `

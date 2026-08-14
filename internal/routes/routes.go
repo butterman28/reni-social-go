@@ -9,29 +9,37 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Setup godoc
+// @Summary Setup
+// @Description Auto-generated thorough documentation for Setup
+// @Tags routes
+// @Produce json
+// @Param app body object true "app"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func Setup(app *fiber.App) {
 	// ──────────────────────────────────────────────────────
-	// 1. PUBLIC ROUTES (No Authentication Required)
+	// 1. PUBLIC ROUTES
 	// ──────────────────────────────────────────────────────
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "healthy"})
 	})
 
-
 	app.Get("/api/workspaces/connect/:platform/callback", workspace.OAuthCallback)
 
-	// Public Auth Routes (Signup/Signin must also be public)
-	app.Post("/api/auth/register/email", auth.RegisterEmailHandler)
-	app.Post("/api/auth/register/email/activate", auth.ActivateEmailHandler)
-	app.Post("/api/auth/register/complete", auth.CompleteRegisterHandler)
-	app.Post("/api/auth/signin", auth.SigninHandler)
+	// Public Auth Routes (Strict Rate Limit: Max 5 req/min to stop brute forcing)
+	authGroup := app.Group("/api/auth", middleware.StrictAuthLimiter())
+	authGroup.Post("/register/email", auth.RegisterEmailHandler)
+	authGroup.Post("/register/email/activate", auth.ActivateEmailHandler)
+	authGroup.Post("/register/complete", auth.CompleteRegisterHandler)
+	authGroup.Post("/signin", auth.SigninHandler)
 
 	// ──────────────────────────────────────────────────────
-	// 2. AUTHENTICATED ROUTES (Requires Authorization Header)
+	// 2. AUTHENTICATED & PROTECTED ROUTES
 	// ──────────────────────────────────────────────────────
-	api := app.Group("/api", middleware.AuthMiddleware)
+	// Apply standard rate limit (60 req/min) + Auth check
+	api := app.Group("/api", middleware.GeneralApiLimiter(), middleware.AuthMiddleware)
 	
-	// Routes that need both Auth and User Session validation
 	in := api.Group("/in", middleware.UserMiddleware)
 
 	in.Post("/auth/signout", auth.SignoutHandler)
@@ -45,6 +53,7 @@ func Setup(app *fiber.App) {
 	in.Post("/workspaces/in/:id/members", workspace.Invite)
 	in.Get("/workspaces/in/:id/members", workspace.Members)
 	in.Delete("/workspaces/in/:id/members/in/:userId", workspace.RemoveMemberHandler)
+	in.Get("/workspaces/in/:id/connections/reauth-status", workspace.ReauthStatus)
 
 	in.Get("/workspaces/in/:id/x/connections", workspace.ListXConnections)
 	in.Get("/workspaces/in/:id/x/tweets/in/:tweetId", workspace.GetXTweet)

@@ -12,11 +12,13 @@ type PlatformConnection struct {
 	ID           uuid.UUID
 	WorkspaceID  uuid.UUID
 	Platform     Platform
-	AccountID    string // the platform's own user/page ID
+	AccountID    string
 	AccountName  string
-	AccessToken  string // encrypted before DB write
-	RefreshToken string // encrypted before DB write
+	AccessToken  string
+	RefreshToken string
 	ExpiresAt    *time.Time
 	CreatedAt    time.Time
-	IsDeleted    bool 
+	IsDeleted    bool
+	NeedsReauth  bool  
+	ReauthReason string 
 }

@@ -32,6 +32,19 @@ type InviteMemberRequest struct {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // CreateWorkspace creates a new workspace and adds the creator as owner.
+// CreateWorkspace godoc
+// @Summary CreateWorkspace
+// @Description Auto-generated thorough documentation for CreateWorkspace
+// @Tags workspace
+// @Produce json
+// @Param ownerID body string true "ownerID"
+// @Param req body string true "req"
+// @Success 200 {object} domain.Workspace "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func CreateWorkspace(ctx context.Context, ownerID string, req CreateWorkspaceRequest) (*domain.Workspace, error) {
 	if req.Name == "" {
 		return nil, fmt.Errorf("workspace name is required")
@@ -82,6 +95,18 @@ func CreateWorkspace(ctx context.Context, ownerID string, req CreateWorkspaceReq
 }
 
 // GetWorkspace fetches a workspace the user is a member of.
+// GetWorkspace godoc
+// @Summary GetWorkspace
+// @Description Auto-generated thorough documentation for GetWorkspace
+// @Tags workspace
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {object} domain.Workspace "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetWorkspace(ctx context.Context, workspaceID, userID string) (*domain.Workspace, error) {
 	var ws domain.Workspace
 	err := db.DB.QueryRowContext(ctx, `
@@ -100,6 +125,18 @@ func GetWorkspace(ctx context.Context, workspaceID, userID string) (*domain.Work
 }
 
 // GetWorkspaceBySlug fetches a workspace the user is a member of using its slug.
+// GetWorkspaceBySlug godoc
+// @Summary GetWorkspaceBySlug
+// @Description Auto-generated thorough documentation for GetWorkspaceBySlug
+// @Tags workspace
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {object} domain.Workspace "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetWorkspaceBySlug(ctx context.Context, slug, userID string) (*domain.Workspace, error) {
 	var ws domain.Workspace
 	err := db.DB.QueryRowContext(ctx, `
@@ -118,6 +155,18 @@ func GetWorkspaceBySlug(ctx context.Context, slug, userID string) (*domain.Works
 }
 
 // ListMyWorkspaces returns all workspaces the user belongs to.
+// ListMyWorkspaces godoc
+// @Summary ListMyWorkspaces
+// @Description Auto-generated thorough documentation for ListMyWorkspaces
+// @Tags workspace
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {array} domain.Workspace "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ListMyWorkspaces(ctx context.Context, userID string) ([]domain.Workspace, error) {
 	rows, err := db.DB.QueryContext(ctx, `
 		SELECT w.id, w.owner_id, w.name, w.slug, w.created_at
@@ -148,6 +197,19 @@ func ListMyWorkspaces(ctx context.Context, userID string) ([]domain.Workspace, e
 
 // InviteMember adds a user (by email) to a workspace.
 // The caller must be owner or admin.
+// InviteMember godoc
+// @Summary InviteMember
+// @Description Auto-generated thorough documentation for InviteMember
+// @Tags workspace
+// @Produce json
+// @Param callerID body string true "callerID"
+// @Param req body string true "req"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func InviteMember(ctx context.Context, workspaceID, callerID string, req InviteMemberRequest) error {
 	// Verify caller has permission
 	if err := requireRole(ctx, workspaceID, callerID, domain.RoleAdmin, domain.RoleOwner); err != nil {
@@ -193,6 +255,18 @@ func InviteMember(ctx context.Context, workspaceID, callerID string, req InviteM
 }
 
 // ListMembers returns all members of a workspace.
+// ListMembers godoc
+// @Summary ListMembers
+// @Description Auto-generated thorough documentation for ListMembers
+// @Tags workspace
+// @Produce json
+// @Param callerID body string true "callerID"
+// @Success 200 {array} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ListMembers(ctx context.Context, workspaceID, callerID string) ([]map[string]any, error) {
 	if err := requireRole(ctx, workspaceID, callerID, domain.RoleMember, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return nil, err
@@ -227,6 +301,18 @@ func ListMembers(ctx context.Context, workspaceID, callerID string) ([]map[strin
 }
 
 // RemoveMember removes a user from a workspace. Owners cannot be removed.
+// RemoveMember godoc
+// @Summary RemoveMember
+// @Description Auto-generated thorough documentation for RemoveMember
+// @Tags workspace
+// @Produce json
+// @Param targetUserID body string true "targetUserID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func RemoveMember(ctx context.Context, workspaceID, callerID, targetUserID string) error {
 	if err := requireRole(ctx, workspaceID, callerID, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return err
@@ -253,23 +339,36 @@ func RemoveMember(ctx context.Context, workspaceID, callerID, targetUserID strin
 // CheckAndReviveConnection checks if a non-expired connection exists.
 // If it exists but is soft-deleted, it automatically revives it (sets is_deleted = false).
 // Returns true if an active connection is available (skipping OAuth), false otherwise.
+// CheckAndReviveConnection godoc
+// @Summary CheckAndReviveConnection
+// @Description Auto-generated thorough documentation for CheckAndReviveConnection
+// @Tags workspace
+// @Produce json
+// @Param workspaceID body string true "workspaceID"
+// @Param platform body string true "platform"
+// @Success 200 {boolean} bool "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func CheckAndReviveConnection(ctx context.Context, workspaceID string, platform string) (bool, error) {
 	var query, updateQuery string
 
 	switch platform {
-	case "linkedin":
-		query = `SELECT is_deleted FROM linkedin_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
-		updateQuery = `UPDATE linkedin_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
-	case "meta":
-		query = `SELECT is_deleted FROM meta_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
-		updateQuery = `UPDATE meta_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
-	case "x":
-		query = `SELECT is_deleted FROM x_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
-		updateQuery = `UPDATE x_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
-	default:
-		return false, fmt.Errorf("unsupported platform: %s", platform)
-	}
-
+		case "linkedin":
+			query = `SELECT is_deleted FROM linkedin_connections WHERE workspace_id = $1 AND expires_at > NOW() AND needs_reauth = false LIMIT 1`
+			updateQuery = `UPDATE linkedin_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW() AND needs_reauth = false`
+		case "meta":
+			query = `SELECT is_deleted FROM meta_connections WHERE workspace_id = $1 AND expires_at > NOW() AND needs_reauth = false LIMIT 1`
+			updateQuery = `UPDATE meta_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW() AND needs_reauth = false`
+		case "x":
+			// unchanged — OAuth 1.0a tokens never expire
+			query = `SELECT is_deleted FROM x_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
+			updateQuery = `UPDATE x_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
+		default:
+			return false, fmt.Errorf("unsupported platform: %s", platform)
+		}
 	var isDeleted bool
 	err := db.DB.QueryRowContext(ctx, query, workspaceID).Scan(&isDeleted)
 	
@@ -294,6 +393,18 @@ func CheckAndReviveConnection(ctx context.Context, workspaceID string, platform 
 	return true, nil
 }
 // ListConnections returns all connected social platforms for a workspace.
+// ListConnections godoc
+// @Summary ListConnections
+// @Description Auto-generated thorough documentation for ListConnections
+// @Tags workspace
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {array} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.PlatformConnection, error) {
 	if err := requireRole(ctx, workspaceID, userID, domain.RoleMember, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return nil, err
@@ -301,18 +412,23 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	var conns []domain.PlatformConnection
 
-	// Query LinkedIn (Removed is_deleted filter so frontend can see disconnected accounts)
+		// Query LinkedIn (includes re-auth flag so the frontend can show a banner)
 	rowsLI, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, account_id, account_name, expires_at, created_at, is_deleted 
-		FROM linkedin_connections 
+		SELECT id, workspace_id, account_id, account_name, expires_at, created_at,
+		       is_deleted, needs_reauth, reauth_reason
+		FROM linkedin_connections
 		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
 		defer rowsLI.Close()
 		for rowsLI.Next() {
 			var c domain.PlatformConnection
-			c.Platform = domain.PlatformLinkedIn
-			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
+			var reason sql.NullString
+			if err := rowsLI.Scan(&c.ID, &c.WorkspaceID, &c.AccountID, &c.AccountName,
+				&c.ExpiresAt, &c.CreatedAt, &c.IsDeleted, &c.NeedsReauth, &reason); err == nil {
+				if reason.Valid {
+					c.ReauthReason = reason.String
+				}
 				conns = append(conns, c)
 			}
 		}
@@ -320,8 +436,9 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 
 	// Query Meta
 	rowsMeta, err := db.DB.QueryContext(ctx, `
-		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at, is_deleted
-		FROM meta_connections 
+		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at,
+		       is_deleted, needs_reauth, reauth_reason
+		FROM meta_connections
 		WHERE workspace_id = $1
 	`, workspaceID)
 	if err == nil {
@@ -329,8 +446,13 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 		for rowsMeta.Next() {
 			var c domain.PlatformConnection
 			var platformStr string
-			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName, &c.ExpiresAt, &c.CreatedAt, &c.IsDeleted); err == nil {
+			var reason sql.NullString
+			if err := rowsMeta.Scan(&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName,
+				&c.ExpiresAt, &c.CreatedAt, &c.IsDeleted, &c.NeedsReauth, &reason); err == nil {
 				c.Platform = domain.Platform(platformStr)
+				if reason.Valid {
+					c.ReauthReason = reason.String
+				}
 				conns = append(conns, c)
 			}
 		}
@@ -357,6 +479,18 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 	return conns, nil
 }
 // SaveConnection upserts a platform connection for a workspace.
+// SaveConnection godoc
+// @Summary SaveConnection
+// @Description Auto-generated thorough documentation for SaveConnection
+// @Tags workspace
+// @Produce json
+// @Param conn body object true "conn"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error {
 		conn.ID = uuid.New()
 		var err error
@@ -368,11 +502,13 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 	VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
 	ON CONFLICT (workspace_id, account_id)
 	DO UPDATE SET
-	access_token  = EXCLUDED.access_token,
-	refresh_token = EXCLUDED.refresh_token,
-	account_name  = EXCLUDED.account_name,
-	expires_at    = EXCLUDED.expires_at,
-	is_deleted    = false
+    access_token  = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    account_name  = EXCLUDED.account_name,
+    expires_at    = EXCLUDED.expires_at,
+    is_deleted    = false,
+    needs_reauth  = false,
+    reauth_reason = NULL
 	`, conn.ID, conn.WorkspaceID, conn.AccountID, conn.AccountName,
 				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
 
@@ -383,11 +519,13 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
 	ON CONFLICT (workspace_id, account_id)
 	DO UPDATE SET
-	access_token  = EXCLUDED.access_token,
-	refresh_token = EXCLUDED.refresh_token,
-	account_name  = EXCLUDED.account_name,
-	expires_at    = EXCLUDED.expires_at,
-	is_deleted    = false
+    access_token  = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    account_name  = EXCLUDED.account_name,
+    expires_at    = EXCLUDED.expires_at,
+    is_deleted    = false,
+    needs_reauth  = false,
+    reauth_reason = NULL
 	`, conn.ID, conn.WorkspaceID, string(conn.Platform), conn.AccountID, conn.AccountName,
 				conn.AccessToken, conn.RefreshToken, conn.ExpiresAt)
 
@@ -413,6 +551,18 @@ func SaveConnection(ctx context.Context, conn *domain.PlatformConnection) error 
 	}
 
 // DisconnectPlatform removes a platform connection.
+// DisconnectPlatform godoc
+// @Summary DisconnectPlatform
+// @Description Auto-generated thorough documentation for DisconnectPlatform
+// @Tags workspace
+// @Produce json
+// @Param callerID body string true "callerID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func DisconnectPlatform(ctx context.Context, workspaceID, connectionID, callerID string) error {
 	if err := requireRole(ctx, workspaceID, callerID, domain.RoleAdmin, domain.RoleOwner); err != nil {
 		return err
@@ -428,6 +578,18 @@ func DisconnectPlatform(ctx context.Context, workspaceID, connectionID, callerID
 // GetXConnectionByID fetches a specific X (Twitter) connection for a workspace,
 // scoped by both workspace_id and connection id so one workspace can't reach
 // into another's connection by guessing a UUID.
+// GetXConnectionByID godoc
+// @Summary GetXConnectionByID
+// @Description Auto-generated thorough documentation for GetXConnectionByID
+// @Tags workspace
+// @Produce json
+// @Param connectionID body string true "connectionID"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetXConnectionByID(ctx context.Context, workspaceID, connectionID string) (*domain.PlatformConnection, error) {
 	var c domain.PlatformConnection
 	var platformStr string
@@ -452,6 +614,18 @@ func GetXConnectionByID(ctx context.Context, workspaceID, connectionID string) (
 // If connectionID is empty, it falls back to the first connected account
 // found (kept for backward compatibility with single-account workspaces).
 // Prefer GetXConnectionByID once the caller knows which account it wants.
+// GetXConnection godoc
+// @Summary GetXConnection
+// @Description Auto-generated thorough documentation for GetXConnection
+// @Tags workspace
+// @Produce json
+// @Param connectionID body string true "connectionID"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetXConnection(ctx context.Context, workspaceID, connectionID string) (*domain.PlatformConnection, error) {
 	if connectionID != "" {
 		return GetXConnectionByID(ctx, workspaceID, connectionID)
@@ -535,6 +709,19 @@ func ListXConnections(c *fiber.Ctx) error {
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
+// requireRole godoc
+// @Summary requireRole
+// @Description Auto-generated thorough documentation for requireRole
+// @Tags workspace
+// @Produce json
+// @Param userID body string true "userID"
+// @Param allowed body string true "allowed"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func requireRole(ctx context.Context, workspaceID, userID string, allowed ...domain.WorkspaceRole) error {
 	var role string
 	err := db.DB.QueryRowContext(ctx,
@@ -554,6 +741,15 @@ func requireRole(ctx context.Context, workspaceID, userID string, allowed ...dom
 	return fmt.Errorf("access denied: insufficient role (%s)", role)
 }
 
+// generateSlug godoc
+// @Summary generateSlug
+// @Description Auto-generated thorough documentation for generateSlug
+// @Tags workspace
+// @Produce json
+// @Param name body string true "name"
+// @Param id body string true "id"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func generateSlug(name string, id uuid.UUID) string {
 	short := id.String()[:8]
 	slug := ""
@@ -570,4 +766,74 @@ func generateSlug(name string, id uuid.UUID) string {
 		slug = "workspace"
 	}
 	return slug + "-" + short
+}
+// ──────────────────────────────────────────────────────────────────────────────
+// Re-auth alerts (tokenless — safe for global frontend polling)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// ReauthAlert describes one platform connection that needs the user to
+// re-authorize. Deliberately contains NO tokens — this endpoint is meant
+// to be polled app-wide for banner display.
+type ReauthAlert struct {
+	Platform    string     `json:"platform"`     // "linkedin" | "meta_ig" | "meta_fb"
+	AccountID   string     `json:"account_id"`
+	AccountName string     `json:"account_name"`
+	Reason      string     `json:"reason"`       // human-readable, from the monitor
+	Expired     bool       `json:"expired"`      // true = already dead, false = expiring soon
+	ExpiresAt   *time.Time `json:"expires_at"`   // for "expires in X days" countdown UI
+}
+
+// ListReauthAlerts returns every flagged connection for a workspace.
+// Any member can read this (it's advisory), but only admin/owner can act
+// on it — the frontend should vary the banner text by role.
+// ListReauthAlerts godoc
+// @Summary ListReauthAlerts
+// @Description Auto-generated thorough documentation for ListReauthAlerts
+// @Tags workspace
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {array} ReauthAlert "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
+func ListReauthAlerts(ctx context.Context, workspaceID, userID string) ([]ReauthAlert, error) {
+	if err := requireRole(ctx, workspaceID, userID, domain.RoleMember, domain.RoleAdmin, domain.RoleOwner); err != nil {
+		return nil, err
+	}
+
+	rows, err := db.DB.QueryContext(ctx, `
+		SELECT 'linkedin' AS platform,
+		       account_id,
+		       COALESCE(account_name, ''),
+		       COALESCE(reauth_reason, ''),
+		       expires_at,
+		       COALESCE(expires_at <= NOW(), true) AS expired
+		FROM linkedin_connections
+		WHERE workspace_id = $1 AND is_deleted = false AND needs_reauth = true
+		UNION ALL
+		SELECT platform,
+		       account_id,
+		       COALESCE(account_name, ''),
+		       COALESCE(reauth_reason, ''),
+		       expires_at,
+		       COALESCE(expires_at <= NOW(), true)
+		FROM meta_connections
+		WHERE workspace_id = $1 AND is_deleted = false AND needs_reauth = true
+	`, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("list reauth alerts: %w", err)
+	}
+	defer rows.Close()
+
+	alerts := []ReauthAlert{} // non-nil → serializes as [] not null
+	for rows.Next() {
+		var a ReauthAlert
+		if err := rows.Scan(&a.Platform, &a.AccountID, &a.AccountName, &a.Reason, &a.ExpiresAt, &a.Expired); err != nil {
+			return nil, fmt.Errorf("scan reauth alert: %w", err)
+		}
+		alerts = append(alerts, a)
+	}
+	return alerts, rows.Err()
 }

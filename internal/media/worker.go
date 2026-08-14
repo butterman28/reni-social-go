@@ -44,6 +44,18 @@ type MediaJob struct {
 }
 
 // EnqueueJob pushes a media job onto the Redis queue.
+// EnqueueJob godoc
+// @Summary EnqueueJob
+// @Description Auto-generated thorough documentation for EnqueueJob
+// @Tags media
+// @Produce json
+// @Param job body string true "job"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func EnqueueJob(job MediaJob) error {
 	data, err := json.Marshal(job)
 	if err != nil {
@@ -55,6 +67,14 @@ func EnqueueJob(job MediaJob) error {
 // StartMediaWorker is the entry point for the media processing goroutine.
 // Designed to run under the supervisor in cmd/worker/main.go.
 // The db parameter is kept for future use (e.g., updating post media URLs after processing).
+// StartMediaWorker godoc
+// @Summary StartMediaWorker
+// @Description Auto-generated thorough documentation for StartMediaWorker
+// @Tags media
+// @Produce json
+// @Param db body object true "db"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func StartMediaWorker(db *sql.DB) {
 	log.Printf(" [Media] Started — listening on queue: %s", config.C.MediaWorkerQueue)
 
@@ -77,6 +97,14 @@ func StartMediaWorker(db *sql.DB) {
 }
 
 // processJob dispatches to the correct processor and logs the result.
+// processJob godoc
+// @Summary processJob
+// @Description Auto-generated thorough documentation for processJob
+// @Tags media
+// @Produce json
+// @Param job body string true "job"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func processJob(job MediaJob) {
 	log.Printf(" [Media] Processing %s for post %s", job.Type, job.PostID)
 
@@ -110,6 +138,18 @@ func processJob(job MediaJob) {
 
 // transcodeVideo re-encodes video to H.264 + AAC MP4.
 // Output is suitable for LinkedIn, Meta, and X upload requirements.
+// transcodeVideo godoc
+// @Summary transcodeVideo
+// @Description Auto-generated thorough documentation for transcodeVideo
+// @Tags media
+// @Produce json
+// @Param output body string true "output"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func transcodeVideo(ctx context.Context, input, output string) error {
 	if err := ensureDir(output); err != nil {
 		return err
@@ -132,6 +172,18 @@ func transcodeVideo(ctx context.Context, input, output string) error {
 }
 
 // generateThumbnail extracts the first frame of a video as a JPEG.
+// generateThumbnail godoc
+// @Summary generateThumbnail
+// @Description Auto-generated thorough documentation for generateThumbnail
+// @Tags media
+// @Produce json
+// @Param output body string true "output"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func generateThumbnail(ctx context.Context, input, output string) error {
 	if err := ensureDir(output); err != nil {
 		return err
@@ -152,6 +204,19 @@ func generateThumbnail(ctx context.Context, input, output string) error {
 }
 
 // resizeImage resizes/compresses an image using FFmpeg's scale filter.
+// resizeImage godoc
+// @Summary resizeImage
+// @Description Auto-generated thorough documentation for resizeImage
+// @Tags media
+// @Produce json
+// @Param output body string true "output"
+// @Param height body integer true "height"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func resizeImage(ctx context.Context, input, output string, width, height int) error {
 	if err := ensureDir(output); err != nil {
 		return err
@@ -175,6 +240,18 @@ func resizeImage(ctx context.Context, input, output string, width, height int) e
 	return cmd.Run()
 }
 
+// ensureDir godoc
+// @Summary ensureDir
+// @Description Auto-generated thorough documentation for ensureDir
+// @Tags media
+// @Produce json
+// @Param path body string true "path"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ensureDir(path string) error {
 	return os.MkdirAll(filepath.Dir(path), 0755)
 }

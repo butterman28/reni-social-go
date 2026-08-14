@@ -23,6 +23,14 @@ import (
 // StartConsumer is the Stage 2 entry point. It blocks on BRPOP from the Redis
 // queue and dispatches each post ID to publishPost in a goroutine pool.
 // Concurrency cap is now configurable via config.C.MaxConcurrentPublishes.
+// StartConsumer godoc
+// @Summary StartConsumer
+// @Description Auto-generated thorough documentation for StartConsumer
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func StartConsumer(db *sql.DB) {
 	sem := make(chan struct{}, config.C.MaxConcurrentPublishes)
 	log.Printf(" [Consumer] Started — listening on queue: %s (max concurrent: %d)",
@@ -44,6 +52,15 @@ func StartConsumer(db *sql.DB) {
 // publishPost fetches a post from DB, fans out to each platform adapter
 // concurrently. Each platform gets its OWN context with its own timeout,
 // so one slow platform can never starve another.
+// publishPost godoc
+// @Summary publishPost
+// @Description Auto-generated thorough documentation for publishPost
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param postID body string true "postID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func publishPost(db *sql.DB, postID string) {
 	// Short context just for DB reads
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -149,6 +166,19 @@ func publishPost(db *sql.DB, postID string) {
 // DB helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
+// saveContainerID godoc
+// @Summary saveContainerID
+// @Description Auto-generated thorough documentation for saveContainerID
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param containerID body string true "containerID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func saveContainerID(ctx context.Context, db *sql.DB, postID, containerID string) error {
 	_, err := db.ExecContext(ctx,
 		`UPDATE posts SET ig_container_id=$1, ig_container_status='processing', updated_at=NOW() WHERE id=$2`,
@@ -156,6 +186,19 @@ func saveContainerID(ctx context.Context, db *sql.DB, postID, containerID string
 	return err
 }
 
+// fetchPost godoc
+// @Summary fetchPost
+// @Description Auto-generated thorough documentation for fetchPost
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param postID body string true "postID"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, error) {
 	var p domain.Post
 	var mediaJSON, platformJSON []byte
@@ -200,6 +243,20 @@ func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, er
 	return &p, nil
 }
 
+// fetchConnections godoc
+// @Summary fetchConnections
+// @Description Auto-generated thorough documentation for fetchConnections
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param workspaceID body string true "workspaceID"
+// @Param platforms body array true "platforms"
+// @Success 200 {object} []domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platforms []domain.Platform) ([]*domain.PlatformConnection, error) {
 	if len(platforms) == 0 {
 		return nil, nil
@@ -285,6 +342,19 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 	return conns, nil
 }
 
+// markPostFailed godoc
+// @Summary markPostFailed
+// @Description Auto-generated thorough documentation for markPostFailed
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param reason body string true "reason"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) error {
 	var retryCount, maxRetries int
 	err := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
@@ -319,6 +389,14 @@ func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) erro
 // Platform adapter factory
 // ──────────────────────────────────────────────────────────────────────────────
 
+// adapterForPlatform godoc
+// @Summary adapterForPlatform
+// @Description Auto-generated thorough documentation for adapterForPlatform
+// @Tags scheduler
+// @Produce json
+// @Param p body string true "p"
+// @Success 200 {object} platform.Publisher "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func adapterForPlatform(p domain.Platform) platform.Publisher {
 	switch p {
 	case domain.PlatformLinkedIn:

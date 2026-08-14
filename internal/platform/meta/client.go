@@ -48,6 +48,13 @@ type Client struct {
 }
 
 // New returns a new Meta Client.
+// New godoc
+// @Summary New
+// @Description Auto-generated thorough documentation for New
+// @Tags meta
+// @Produce json
+// @Success 200 {object} Client "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func New() *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 20 * time.Second},
@@ -62,6 +69,16 @@ var _ platform.Publisher = (*Client)(nil)
 // ──────────────────────────────────────────────────────────────────────────────
 
 // AuthorizationURL returns the Meta OAuth dialog URL.
+// AuthorizationURL godoc
+// @Summary AuthorizationURL
+// @Description Auto-generated thorough documentation for AuthorizationURL
+// @Tags meta
+// @Produce json
+// @Param state body string true "state"
+// @Param id body string true "id"
+// @Param platform body string true "platform"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func AuthorizationURL(state string, id string, platform string) string {
 	params := url.Values{}
 	params.Set("client_id", config.C.MetaAppID)
@@ -75,6 +92,18 @@ func AuthorizationURL(state string, id string, platform string) string {
 // ExchangeCode exchanges an authorization code for a user access token,
 // then exchanges it for a long-lived token, then resolves the correct
 // publishing identity for the requested platform ("meta_fb" or "meta_ig").
+// ExchangeCode godoc
+// @Summary ExchangeCode
+// @Description Auto-generated thorough documentation for ExchangeCode
+// @Tags meta
+// @Produce json
+// @Param redirectURI body string true "redirectURI"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) ExchangeCode(ctx context.Context, code, platformType, redirectURI string) (*domain.PlatformConnection, error) {
 	// Step 1: short-lived user token
 	params := url.Values{}
@@ -153,6 +182,18 @@ func (c *Client) ExchangeCode(ctx context.Context, code, platformType, redirectU
 // RefreshToken for Meta — long-lived tokens are refreshed by re-exchanging them.
 // For Instagram connections this re-exchanges the stored Page token, which
 // works the same way as a user token for this endpoint.
+// RefreshToken godoc
+// @Summary RefreshToken
+// @Description Auto-generated thorough documentation for RefreshToken
+// @Tags meta
+// @Produce json
+// @Param conn body object true "conn"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnection) (*domain.PlatformConnection, error) {
 	params := url.Values{}
 	params.Set("grant_type", "fb_exchange_token")
@@ -186,6 +227,19 @@ func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnecti
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Publish routes to the correct publishing method based on platform type.
+// Publish godoc
+// @Summary Publish
+// @Description Auto-generated thorough documentation for Publish
+// @Tags meta
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
     switch conn.Platform {
     case domain.PlatformMetaFB:
@@ -199,6 +253,19 @@ func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.Pl
 }
 
 // publishFacebook posts to a Facebook Page feed.
+// publishFacebook godoc
+// @Summary publishFacebook
+// @Description Auto-generated thorough documentation for publishFacebook
+// @Tags meta
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) publishFacebook(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	endpoint := fmt.Sprintf("%s/%s/feed", graphBase, conn.AccountID)
 	
@@ -232,6 +299,19 @@ func (c *Client) publishFacebook(ctx context.Context, post *domain.Post, conn *d
 // publishInstagram creates a media container then publishes it.
 // Instagram has no text-only post type — at least one image or video URL
 // is required in post.MediaURLs.
+// publishInstagram godoc
+// @Summary publishInstagram
+// @Description Auto-generated thorough documentation for publishInstagram
+// @Tags meta
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) publishInstagram(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	if len(post.MediaURLs) == 0 {
 		return nil, fmt.Errorf("meta/ig: Instagram requires at least one image or video — text-only posts are not supported by the API")
@@ -290,6 +370,18 @@ func (c *Client) publishInstagram(ctx context.Context, post *domain.Post, conn *
 
 // waitForContainerReady polls an Instagram media container's processing
 // status until it's FINISHED, errors out, or times out (60s, every 3s).
+// waitForContainerReady godoc
+// @Summary waitForContainerReady
+// @Description Auto-generated thorough documentation for waitForContainerReady
+// @Tags meta
+// @Produce json
+// @Param accessToken body string true "accessToken"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) waitForContainerReady(ctx context.Context, containerID, accessToken string) error {
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Now().Before(deadline) {
@@ -327,6 +419,14 @@ func (c *Client) waitForContainerReady(ctx context.Context, containerID, accessT
 
 // isVideoURL is a simple extension-based heuristic. domain.Post has no
 // media-type field yet, so we infer from the URL's file extension.
+// isVideoURL godoc
+// @Summary isVideoURL
+// @Description Auto-generated thorough documentation for isVideoURL
+// @Tags meta
+// @Produce json
+// @Param mediaURL body string true "mediaURL"
+// @Success 200 {boolean} bool "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func isVideoURL(mediaURL string) bool {
 	lower := strings.ToLower(mediaURL)
 	for _, ext := range []string{".mp4", ".mov", ".m4v", ".avi", ".webm"} {
@@ -349,6 +449,18 @@ type metaPage struct {
 
 // fetchPages lists the Facebook Pages the authenticated user manages,
 // each with its own Page access token (distinct from the user token).
+// fetchPages godoc
+// @Summary fetchPages
+// @Description Auto-generated thorough documentation for fetchPages
+// @Tags meta
+// @Produce json
+// @Param userAccessToken body string true "userAccessToken"
+// @Success 200 {array} metaPage "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchPages(ctx context.Context, userAccessToken string) ([]metaPage, error) {
 	endpoint := graphBase + "/me/accounts?fields=id,name,access_token&access_token=" + url.QueryEscape(userAccessToken)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -381,6 +493,18 @@ func (c *Client) fetchPages(ctx context.Context, userAccessToken string) ([]meta
 // fetchInstagramAccount finds the first connected Page that has a linked
 // Instagram Business/Creator account, and returns the Page access token
 // (needed for all subsequent IG Graph API calls) + the IG account ID + username.
+// fetchInstagramAccount godoc
+// @Summary fetchInstagramAccount
+// @Description Auto-generated thorough documentation for fetchInstagramAccount
+// @Tags meta
+// @Produce json
+// @Param userAccessToken body string true "userAccessToken"
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchInstagramAccount(ctx context.Context, userAccessToken string) (pageAccessToken, igAccountID, igUsername string, err error) {
 	pages, err := c.fetchPages(ctx, userAccessToken)
 	if err != nil {
@@ -424,6 +548,14 @@ func (c *Client) fetchInstagramAccount(ctx context.Context, userAccessToken stri
 
 // fetchIGUsername is best-effort (purely cosmetic); a failure here doesn't
 // block resolving the account, it just leaves AccountName blank.
+// fetchIGUsername godoc
+// @Summary fetchIGUsername
+// @Description Auto-generated thorough documentation for fetchIGUsername
+// @Tags meta
+// @Produce json
+// @Param pageAccessToken body string true "pageAccessToken"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchIGUsername(ctx context.Context, igAccountID, pageAccessToken string) string {
 	endpoint := fmt.Sprintf("%s/%s?fields=username&access_token=%s", graphBase, igAccountID, url.QueryEscape(pageAccessToken))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -445,6 +577,18 @@ func (c *Client) fetchIGUsername(ctx context.Context, igAccountID, pageAccessTok
 	return result.Username
 }
 
+// fetchMe godoc
+// @Summary fetchMe
+// @Description Auto-generated thorough documentation for fetchMe
+// @Tags meta
+// @Produce json
+// @Param accessToken body string true "accessToken"
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchMe(ctx context.Context, accessToken string) (id, name string, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		graphBase+"/me?fields=id,name&access_token="+accessToken, nil)
@@ -470,6 +614,20 @@ func (c *Client) fetchMe(ctx context.Context, accessToken string) (id, name stri
 	return me.ID, me.Name, nil
 }
 
+// postJSON godoc
+// @Summary postJSON
+// @Description Auto-generated thorough documentation for postJSON
+// @Tags meta
+// @Produce json
+// @Param endpoint body string true "endpoint"
+// @Param payload body object true "payload"
+// @Param accessToken body string true "accessToken"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) postJSON(ctx context.Context, endpoint string, payload map[string]any, accessToken string) (map[string]any, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {

@@ -1,0 +1,1257 @@
+basePath: /
+definitions:
+  auth.ActivateEmailResponse:
+    properties:
+      data: {}
+      http_status:
+        type: integer
+      message:
+        type: string
+      status:
+        type: boolean
+    type: object
+  auth.AuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
+  auth.CompleteRegisterResponse:
+    properties:
+      data: {}
+      http_status:
+        type: integer
+      message:
+        type: string
+      status:
+        type: boolean
+    type: object
+  auth.RegisterEmailResponse:
+    properties:
+      data: {}
+      http_status:
+        type: integer
+      message:
+        type: string
+      status:
+        type: boolean
+    type: object
+  auth.SigninResponse:
+    properties:
+      data: {}
+      http_status:
+        type: integer
+      message:
+        type: string
+      status:
+        type: boolean
+    type: object
+  domain.Platform:
+    enum:
+    - linkedin
+    - meta_ig
+    - meta_fb
+    - x
+    - tiktok
+    type: string
+    x-enum-comments:
+      PlatformMetaFB: Facebook Page
+      PlatformMetaIG: Instagram
+      PlatformX: Twitter / X
+    x-enum-descriptions:
+    - ""
+    - Instagram
+    - Facebook Page
+    - Twitter / X
+    - ""
+    x-enum-varnames:
+    - PlatformLinkedIn
+    - PlatformMetaIG
+    - PlatformMetaFB
+    - PlatformX
+    - PlatformTikTok
+  domain.PlatformConnection:
+    properties:
+      accessToken:
+        type: string
+      accountID:
+        type: string
+      accountName:
+        type: string
+      createdAt:
+        type: string
+      expiresAt:
+        type: string
+      id:
+        type: string
+      isDeleted:
+        type: boolean
+      needsReauth:
+        type: boolean
+      platform:
+        $ref: '#/definitions/domain.Platform'
+      reauthReason:
+        type: string
+      refreshToken:
+        type: string
+      workspaceID:
+        type: string
+    type: object
+  domain.Post:
+    properties:
+      articleTitle:
+        type: string
+      articleURL:
+        description: optional for linkedin
+        type: string
+      authorID:
+        type: string
+      content:
+        type: string
+      createdAt:
+        type: string
+      currentPublishAttemptID:
+        description: '`json:"current_publish_attempt_id"`'
+        type: string
+      failReason:
+        type: string
+      id:
+        type: string
+      max_retries:
+        type: integer
+      mediaURLs:
+        description: stored as JSONB in DB
+        items:
+          type: string
+        type: array
+      platforms:
+        description: stored as JSONB in DB
+        items:
+          $ref: '#/definitions/domain.Platform'
+        type: array
+      publishedAt:
+        type: string
+      retry_count:
+        type: integer
+      scheduledAt:
+        type: string
+      status:
+        $ref: '#/definitions/domain.PostStatus'
+      updatedAt:
+        type: string
+      workspaceID:
+        type: string
+    type: object
+  domain.PostStatus:
+    enum:
+    - draft
+    - scheduled
+    - publishing
+    - published
+    - failed
+    type: string
+    x-enum-comments:
+      StatusPublishing: locked by worker — being sent
+    x-enum-descriptions:
+    - ""
+    - ""
+    - locked by worker — being sent
+    - ""
+    - ""
+    x-enum-varnames:
+    - StatusDraft
+    - StatusScheduled
+    - StatusPublishing
+    - StatusPublished
+    - StatusFailed
+  domain.User:
+    properties:
+      address:
+        type: string
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      fullname:
+        type: string
+      gender:
+        type: string
+      id:
+        type: string
+      is_email_verified:
+        type: boolean
+      last_name:
+        type: string
+      phone_number:
+        type: string
+      token:
+        type: string
+      username:
+        type: string
+    type: object
+  domain.Workspace:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      ownerID:
+        type: string
+      slug:
+        type: string
+    type: object
+  linkedin.Client:
+    type: object
+  linkedin.tokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+    type: object
+  meta.Client:
+    type: object
+  meta.metaPage:
+    properties:
+      access_token:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  miniredis.Miniredis:
+    properties:
+      ctx: {}
+    type: object
+  platform.PublishResult:
+    properties:
+      containerID:
+        description: Instagram container ID to poll later
+        type: string
+      pending:
+        description: true = platform is still processing async
+        type: boolean
+      platformPostID:
+        description: the platform's own ID for the created post
+        type: string
+      url:
+        description: direct link to the published post (if available)
+        type: string
+    type: object
+  scheduler.CacheResultEntry:
+    properties:
+      container_id:
+        type: string
+      created_at:
+        type: string
+      fail_reason:
+        type: string
+      id:
+        type: string
+      platform:
+        type: string
+      platform_post_id:
+        type: string
+      platform_post_url:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  tiktok.Client:
+    type: object
+  workspace.ReauthAlert:
+    properties:
+      account_id:
+        type: string
+      account_name:
+        type: string
+      expired:
+        description: true = already dead, false = expiring soon
+        type: boolean
+      expires_at:
+        description: for "expires in X days" countdown UI
+        type: string
+      platform:
+        description: '"linkedin" | "meta_ig" | "meta_fb"'
+        type: string
+      reason:
+        description: human-readable, from the monitor
+        type: string
+    type: object
+  x.Client:
+    type: object
+info:
+  contact: {}
+  description: Reni Social backend API
+  title: Reni Social API
+  version: "1.0"
+paths:
+  /api/auth/register/complete:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: POST /api/auth/register/complete
+      tags:
+      - auth
+  /api/auth/register/email:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: POST /api/auth/register/email
+      tags:
+      - auth
+  /api/auth/register/email/activate:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: POST /api/auth/register/email/activate
+      tags:
+      - auth
+  /api/auth/signin:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: POST /api/auth/signin
+      tags:
+      - auth
+  /api/in/auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/auth/me
+      tags:
+      - auth
+  /api/in/auth/signout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: POST /api/in/auth/signout
+      tags:
+      - auth
+  /api/in/posts:
+    get:
+      description: Auto-generated thorough documentation for List
+      parameters:
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful operation
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: List
+      tags:
+      - post
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: POST /api/in/posts
+      tags:
+      - post
+  /api/in/posts/in/{id}:
+    delete:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: DELETE /api/in/posts/in/:id
+      tags:
+      - post
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/posts/in/:id
+      tags:
+      - post
+    put:
+      description: Auto-generated thorough documentation for Update
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful operation
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: Update
+      tags:
+      - post
+  /api/in/posts/in/{id}/publish:
+    post:
+      description: Auto-generated thorough documentation for Publish
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successful operation
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: Publish
+      tags:
+      - post
+  /api/in/posts/in/{id}/results:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Publish attempt ID
+        in: query
+        name: attempt_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/posts/in/:id/results
+      tags:
+      - post
+  /api/in/posts/in/{id}/schedule:
+    post:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: POST /api/in/posts/in/:id/schedule
+      tags:
+      - post
+  /api/in/workspaces:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces
+      tags:
+      - workspace
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: POST /api/in/workspaces
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/connect/in/{platform}:
+    post:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: platform
+        in: path
+        name: platform
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: POST /api/in/workspaces/in/:id/connect/in/:platform
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/connections:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/connections
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/connections/{connectionId}:
+    delete:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: connectionId
+        in: path
+        name: connectionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: DELETE /api/in/workspaces/in/:id/connections/:connectionId
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/connections/reauth-status:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/connections/reauth-status
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/members:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/members
+      tags:
+      - workspace
+    post:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: POST /api/in/workspaces/in/:id/members
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/members/in/{userId}:
+    delete:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: userId
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: DELETE /api/in/workspaces/in/:id/members/in/:userId
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/x/connections:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/x/connections
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/x/lists/in/{listId}:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: listId
+        in: path
+        name: listId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/x/lists/in/:listId
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/x/spaces/in/{spaceId}:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: spaceId
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/x/spaces/in/:spaceId
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/x/tweets/in/{tweetId}:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: tweetId
+        in: path
+        name: tweetId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/x/tweets/in/:tweetId
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/x/tweets/in/{tweetId}/full:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: tweetId
+        in: path
+        name: tweetId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/x/tweets/in/:tweetId/full
+      tags:
+      - workspace
+  /api/in/workspaces/in/{id}/x/users/in/{userId}:
+    get:
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: userId
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/:id/x/users/in/:userId
+      tags:
+      - workspace
+  /api/in/workspaces/in/slug/{slug}:
+    get:
+      parameters:
+      - description: slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      - SessionId: []
+      summary: GET /api/in/workspaces/in/slug/:slug
+      tags:
+      - workspace
+  /api/workspaces/connect/{platform}/callback:
+    get:
+      parameters:
+      - description: platform
+        in: path
+        name: platform
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: GET /api/workspaces/connect/:platform/callback
+      tags:
+      - workspace
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+  SessionId:
+    in: header
+    name: X-Session-Id
+    type: apiKey
+swagger: "2.0"

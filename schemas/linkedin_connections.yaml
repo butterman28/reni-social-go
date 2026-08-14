@@ -26,11 +26,17 @@ columns:
     type: timestamptz
     not_null: true
     default: now()
-  is_deleted: 
+  is_deleted:
     type: boolean
     not_null: true
     default: false
-
+  needs_reauth:
+    type: boolean
+    not_null: true
+    default: false
+  reauth_reason:
+    type: text
+    not_null: false
 indexes:
   - name: idx_linkedin_connections_workspace
     columns: [workspace_id]

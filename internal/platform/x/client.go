@@ -45,6 +45,13 @@ type Client struct {
 }
 
 // New returns a new X Client.
+// New godoc
+// @Summary New
+// @Description Auto-generated thorough documentation for New
+// @Tags x
+// @Produce json
+// @Success 200 {object} Client "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func New() *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 20 * time.Second},
@@ -60,6 +67,18 @@ var _ platform.Publisher = (*Client)(nil)
 
 // RequestToken fetches a request token and returns (oauthToken, authorizeURL, error).
 // Store oauthToken in Redis keyed by state so the callback can look it up.
+// RequestToken godoc
+// @Summary RequestToken
+// @Description Auto-generated thorough documentation for RequestToken
+// @Tags x
+// @Produce json
+// @Param state body string true "state"
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) RequestToken(ctx context.Context, state string) (oauthToken, authorizeURL string, err error) {
 	callback := config.C.XRedirectURL
 	if state != "" {
@@ -98,6 +117,18 @@ func (c *Client) RequestToken(ctx context.Context, state string) (oauthToken, au
 }
 
 // ExchangeVerifier exchanges an oauth_token + oauth_verifier for permanent access credentials.
+// ExchangeVerifier godoc
+// @Summary ExchangeVerifier
+// @Description Auto-generated thorough documentation for ExchangeVerifier
+// @Tags x
+// @Produce json
+// @Param oauthVerifier body string true "oauthVerifier"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) ExchangeVerifier(ctx context.Context, oauthToken, oauthVerifier string) (*domain.PlatformConnection, error) {
 	params := url.Values{
 		"oauth_verifier": {oauthVerifier},
@@ -134,6 +165,18 @@ func (c *Client) ExchangeVerifier(ctx context.Context, oauthToken, oauthVerifier
 }
 
 // RefreshToken — X OAuth 1.0a tokens don't expire; this is a no-op passthrough.
+// RefreshToken godoc
+// @Summary RefreshToken
+// @Description Auto-generated thorough documentation for RefreshToken
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) RefreshToken(_ context.Context, conn *domain.PlatformConnection) (*domain.PlatformConnection, error) {
 	// OAuth 1.0a tokens are permanent until revoked. Nothing to refresh.
 	return conn, nil
@@ -144,6 +187,19 @@ func (c *Client) RefreshToken(_ context.Context, conn *domain.PlatformConnection
 // ──────────────────────────────────────────────────────────────────────────────
 
 // Publish posts a tweet using the X API v2.
+// Publish godoc
+// @Summary Publish
+// @Description Auto-generated thorough documentation for Publish
+// @Tags x
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	// conn.AccessToken = oauth_token, conn.RefreshToken = oauth_token_secret
 	accessToken := conn.AccessToken
@@ -210,6 +266,16 @@ func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.Pl
 // ──────────────────────────────────────────────────────────────────────────────
 
 // buildOAuth1Header constructs a signed OAuth 1.0a Authorization header.
+// buildOAuth1Header godoc
+// @Summary buildOAuth1Header
+// @Description Auto-generated thorough documentation for buildOAuth1Header
+// @Tags x
+// @Produce json
+// @Param rawURL body string true "rawURL"
+// @Param extraParams body string true "extraParams"
+// @Param tokenSecret body string true "tokenSecret"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) buildOAuth1Header(method, rawURL string, extraParams url.Values,
 	consumerKey, consumerSecret, oauthToken, tokenSecret string) string {
 
@@ -280,6 +346,20 @@ func (c *Client) buildOAuth1Header(method, rawURL string, extraParams url.Values
 
 // GetTweet fetches a single tweet by ID.
 // Use params to specify tweet.fields, expansions, etc.
+// GetTweet godoc
+// @Summary GetTweet
+// @Description Auto-generated thorough documentation for GetTweet
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Param tweetID body string true "tweetID"
+// @Param params body string true "params"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) GetTweet(ctx context.Context, conn *domain.PlatformConnection, tweetID string, params url.Values) (map[string]any, error) {
 	endpoint := fmt.Sprintf("https://api.twitter.com/2/tweets/%s", tweetID)
 	return c.doV2Get(ctx, conn, endpoint, params)
@@ -287,6 +367,20 @@ func (c *Client) GetTweet(ctx context.Context, conn *domain.PlatformConnection, 
 
 // GetUser fetches a single user by ID.
 // Use params to specify user.fields.
+// GetUser godoc
+// @Summary GetUser
+// @Description Auto-generated thorough documentation for GetUser
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Param userID body string true "userID"
+// @Param params body string true "params"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) GetUser(ctx context.Context, conn *domain.PlatformConnection, userID string, params url.Values) (map[string]any, error) {
 	endpoint := fmt.Sprintf("https://api.twitter.com/2/users/%s", userID)
 	return c.doV2Get(ctx, conn, endpoint, params)
@@ -294,6 +388,20 @@ func (c *Client) GetUser(ctx context.Context, conn *domain.PlatformConnection, u
 
 // GetSpace fetches a single space by ID.
 // Use params to specify space.fields.
+// GetSpace godoc
+// @Summary GetSpace
+// @Description Auto-generated thorough documentation for GetSpace
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Param spaceID body string true "spaceID"
+// @Param params body string true "params"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) GetSpace(ctx context.Context, conn *domain.PlatformConnection, spaceID string, params url.Values) (map[string]any, error) {
 	endpoint := fmt.Sprintf("https://api.twitter.com/2/spaces/%s", spaceID)
 	return c.doV2Get(ctx, conn, endpoint, params)
@@ -301,6 +409,20 @@ func (c *Client) GetSpace(ctx context.Context, conn *domain.PlatformConnection, 
 
 // GetList fetches a single list by ID.
 // Use params to specify list.fields.
+// GetList godoc
+// @Summary GetList
+// @Description Auto-generated thorough documentation for GetList
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Param listID body string true "listID"
+// @Param params body string true "params"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) GetList(ctx context.Context, conn *domain.PlatformConnection, listID string, params url.Values) (map[string]any, error) {
 	endpoint := fmt.Sprintf("https://api.twitter.com/2/lists/%s", listID)
 	return c.doV2Get(ctx, conn, endpoint, params)
@@ -310,6 +432,19 @@ func (c *Client) GetList(ctx context.Context, conn *domain.PlatformConnection, l
 // Media, Polls, Places, and the Author (User).
 // This demonstrates how to use media.fields, poll.fields, and place.fields,
 // as X API v2 does not have direct endpoints for these objects.
+// GetTweetWithIncludes godoc
+// @Summary GetTweetWithIncludes
+// @Description Auto-generated thorough documentation for GetTweetWithIncludes
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Param tweetID body string true "tweetID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) GetTweetWithIncludes(ctx context.Context, conn *domain.PlatformConnection, tweetID string) (map[string]any, error) {
 	params := url.Values{}
 
@@ -329,6 +464,20 @@ func (c *Client) GetTweetWithIncludes(ctx context.Context, conn *domain.Platform
 }
 
 // doV2Get is a helper that signs a GET request with OAuth 1.0a and returns the decoded JSON.
+// doV2Get godoc
+// @Summary doV2Get
+// @Description Auto-generated thorough documentation for doV2Get
+// @Tags x
+// @Produce json
+// @Param conn body object true "conn"
+// @Param endpoint body string true "endpoint"
+// @Param params body string true "params"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) doV2Get(ctx context.Context, conn *domain.PlatformConnection, endpoint string, params url.Values) (map[string]any, error) {
 	accessToken := conn.AccessToken
 	accessSecret := conn.RefreshToken
@@ -368,6 +517,13 @@ func (c *Client) doV2Get(ctx context.Context, conn *domain.PlatformConnection, e
 	return result, nil
 }
 
+// generateNonce godoc
+// @Summary generateNonce
+// @Description Auto-generated thorough documentation for generateNonce
+// @Tags x
+// @Produce json
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func generateNonce() string {
 	b := make([]byte, 16)
 	rand.Read(b)

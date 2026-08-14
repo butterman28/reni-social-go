@@ -15,6 +15,18 @@ type smsPayload struct {
 }
 
 // SendSMS sends an SMS via the configured Reni SMS gateway API.
+// SendSMS godoc
+// @Summary SendSMS
+// @Description Auto-generated thorough documentation for SendSMS
+// @Tags utils
+// @Produce json
+// @Param message body string true "message"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func SendSMS(to, message string) error {
 	var res reniMailRes // reuses the status/message response shape from email.go
 

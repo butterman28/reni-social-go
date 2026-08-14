@@ -26,6 +26,14 @@ import (
 
 // StartPoller is the Stage 1 entry point. It runs forever and is designed
 // to be wrapped by the supervisor goroutine in cmd/worker/main.go.
+// StartPoller godoc
+// @Summary StartPoller
+// @Description Auto-generated thorough documentation for StartPoller
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func StartPoller(db *sql.DB) {
 	interval := time.Duration(config.C.SchedulerPollIntervalSecs) * time.Second
 	ticker := time.NewTicker(interval)
@@ -42,6 +50,18 @@ func StartPoller(db *sql.DB) {
 
 // pollAndEnqueue finds all posts due for publishing, marks them as 'publishing'
 // and pushes their IDs onto the Redis queue.
+// pollAndEnqueue godoc
+// @Summary pollAndEnqueue
+// @Description Auto-generated thorough documentation for pollAndEnqueue
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func pollAndEnqueue(db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

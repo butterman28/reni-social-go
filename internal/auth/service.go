@@ -34,6 +34,18 @@ type AuthResponse struct {
 	User  *domain.User `json:"user"`
 }
 
+// Signup godoc
+// @Summary Signup
+// @Description Auto-generated thorough documentation for Signup
+// @Tags auth
+// @Produce json
+// @Param req body string true "req"
+// @Success 200 {object} AuthResponse "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func Signup(ctx context.Context, req SignupRequest) (*AuthResponse, error) {
 	if req.Email == "" || req.Password == "" {
 		return nil, fmt.Errorf("email and password are required")
@@ -148,6 +160,18 @@ type SigninUserData struct {
 	IDData           any    `json:"IDData"`
 }
 
+// Signin godoc
+// @Summary Signin
+// @Description Auto-generated thorough documentation for Signin
+// @Tags auth
+// @Produce json
+// @Param req body string true "req"
+// @Success 200 {object} SigninResponse "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 	if req.Mail == "" || req.Pword == "" {
 		return nil, fmt.Errorf("mail and password are required")
@@ -241,6 +265,18 @@ func Signin(ctx context.Context, req SigninRequest) (*SigninResponse, error) {
 // Signout
 // ──────────────────────────────────────────────────────────────────────────────
 
+// Signout godoc
+// @Summary Signout
+// @Description Auto-generated thorough documentation for Signout
+// @Tags auth
+// @Produce json
+// @Param token body string true "token"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func Signout(token string) error {
 	return utils.DeleteSession(token)
 }
@@ -249,6 +285,18 @@ func Signout(token string) error {
 // Me
 // ──────────────────────────────────────────────────────────────────────────────
 
+// GetMe godoc
+// @Summary GetMe
+// @Description Auto-generated thorough documentation for GetMe
+// @Tags auth
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {object} domain.User "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetMe(ctx context.Context, userID string) (*domain.User, error) {
 	var user domain.User
 	err := db.DB.QueryRowContext(ctx, `
@@ -273,6 +321,18 @@ func GetMe(ctx context.Context, userID string) (*domain.User, error) {
 
 // issueSession generates a cryptographically random token, stores it in Redis,
 // and returns the token to be sent to the client.
+// issueSession godoc
+// @Summary issueSession
+// @Description Auto-generated thorough documentation for issueSession
+// @Tags auth
+// @Produce json
+// @Param userID body string true "userID"
+// @Success 200 {string} string "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func issueSession(userID uuid.UUID) (string, error) {
 	token := utils.RandomAlphaNumeric(64)
 	if err := utils.SetSession(token, userID, sessionTTL); err != nil {
@@ -296,6 +356,18 @@ type RegisterEmailResponse struct {
 	HttpStatus int    `json:"http_status"`
 }
 
+// RegisterEmail godoc
+// @Summary RegisterEmail
+// @Description Auto-generated thorough documentation for RegisterEmail
+// @Tags auth
+// @Produce json
+// @Param req body string true "req"
+// @Success 200 {object} RegisterEmailResponse "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func RegisterEmail(ctx context.Context, req RegisterEmailRequest) (*RegisterEmailResponse, error) {
 	var res RegisterEmailResponse
 	err := utils.DoRequest(utils.RequestOptions{
@@ -325,6 +397,18 @@ type ActivateEmailResponse struct {
 	HttpStatus int    `json:"http_status"`
 }
 
+// ActivateEmail godoc
+// @Summary ActivateEmail
+// @Description Auto-generated thorough documentation for ActivateEmail
+// @Tags auth
+// @Produce json
+// @Param req body string true "req"
+// @Success 200 {object} ActivateEmailResponse "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func ActivateEmail(ctx context.Context, req ActivateEmailRequest) (*ActivateEmailResponse, error) {
 	var res ActivateEmailResponse
 	err := utils.DoRequest(utils.RequestOptions{
@@ -373,6 +457,18 @@ type CompleteRegisterData struct {
 	Token    string `json:"token"`
 }
 
+// CompleteRegister godoc
+// @Summary CompleteRegister
+// @Description Auto-generated thorough documentation for CompleteRegister
+// @Tags auth
+// @Produce json
+// @Param req body string true "req"
+// @Success 200 {object} CompleteRegisterResponse "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*CompleteRegisterResponse, error) {
 	var res CompleteRegisterResponse
 	err := utils.DoRequest(utils.RequestOptions{
