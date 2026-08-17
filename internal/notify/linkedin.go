@@ -41,7 +41,7 @@ func (LinkedInExpiryNotifier) NotifyReauthRequired(_ context.Context, conn linke
 
 	settingsURL := config.C.AppUrl
 	if conn.WorkspaceSlug != "" {
-		settingsURL = settingsURL + "/" + conn.WorkspaceSlug + "/settings?tab=accounts"
+		settingsURL = settingsURL + "/" + conn.WorkspaceSlug + "/settings?tab=accounts&reconnect=linkedin"
 	}
 
 	subject := "Action required: reconnect your LinkedIn account on Reni Social"

@@ -363,9 +363,9 @@ func CheckAndReviveConnection(ctx context.Context, workspaceID string, platform 
 			query = `SELECT is_deleted FROM meta_connections WHERE workspace_id = $1 AND expires_at > NOW() AND needs_reauth = false LIMIT 1`
 			updateQuery = `UPDATE meta_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW() AND needs_reauth = false`
 		case "x":
-			// unchanged — OAuth 1.0a tokens never expire
-			query = `SELECT is_deleted FROM x_connections WHERE workspace_id = $1 AND expires_at > NOW() LIMIT 1`
-			updateQuery = `UPDATE x_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
+			query = `SELECT is_deleted FROM x_connections WHERE workspace_id = $1 LIMIT 1`
+			updateQuery = `UPDATE x_connections SET is_deleted = false WHERE workspace_id = $1`
+			//updateQuery = `UPDATE x_connections SET is_deleted = false WHERE workspace_id = $1 AND expires_at > NOW()`
 		default:
 			return false, fmt.Errorf("unsupported platform: %s", platform)
 		}

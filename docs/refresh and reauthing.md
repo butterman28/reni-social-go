@@ -30,6 +30,9 @@ Instagram long-lived tokens typically expire after 60 days. The Meta Refresher p
 3.  **Exponential Backoff:** If a transient network error occurs, the worker retries up to 3 times using exponential backoff with randomized jitter (`BackoffBase`).
 4.  **Permanent Failure Detection:** If the Meta API returns specific OAuth errors (e.g., Code `190` Invalid Token, Code `102` Session Expired), the system recognizes that the user has revoked access or changed their password. It aborts retries and flags the database row with `needs_reauth = true`.
 
+5.  **Rate-Limit Awareness:** Throttle errors (codes `4`, `17`, `32`, `613`) mean "you are calling too fast", not "the token is broken" — so they are **not** retried on the short backoff (that would amplify the throttle). The claim is released and the token is retried next cycle, well within the 15-day refresh window.
+6.  **Circuit Breaker:** Once the last 5 consecutive calls to Meta have all failed (throttled, 5xx, or network), the remainder of the batch stops calling Meta and releases its claims instead of burning `BatchSize × 3` calls against a down or rate-limited API. Each new cycle starts with a fresh breaker and probes again.
+
 ---
 
 ## 💼 LinkedIn Expiry & Re-authentication

@@ -40,6 +40,9 @@ columns:
   reauth_reason:
     type: text
     not_null: false
+  refresh_claimed_at:
+    type: timestamptz
+    not_null: false
 
 indexes:
   - name: idx_meta_connections_workspace

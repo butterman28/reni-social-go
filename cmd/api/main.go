@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strings" // <-- Added for HasPrefix
@@ -51,8 +50,6 @@ func main() {
 		BodyLimit:               100 * 1024 * 1024,     // Set to 100MB
 	})
 	app.Get("/swagger/*", swagger.HandlerDefault) 
-
-	log.Fatal(app.Listen(":3000"))
 	app.Use(logger.New())
 
 	app.Use(cors.New(cors.Config{

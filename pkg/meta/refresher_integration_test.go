@@ -39,12 +39,13 @@ type postgresRepo struct {
 
 func (r *postgresRepo) GetTokensNeedingRefresh(ctx context.Context, thresholdDays int, limit int) ([]MetaConnection, error) {
 	query := `
-		SELECT id, access_token, expires_at
-		FROM meta_connections
-		WHERE is_deleted = false
-		  AND expires_at IS NOT NULL
-		  AND expires_at <= NOW() + ($1 || ' days')::INTERVAL
-		LIMIT $2
+    SELECT id, access_token, expires_at
+    FROM meta_connections
+    WHERE is_deleted = false
+      AND platform = 'meta_ig'
+      AND expires_at IS NOT NULL
+      AND expires_at <= NOW() + ($1 || ' days')::INTERVAL
+    LIMIT $2
 	`
 	rows, err := r.db.QueryContext(ctx, query, thresholdDays, limit)
 	if err != nil {
@@ -175,4 +176,10 @@ func TestRefresher_Live(t *testing.T) {
 		t.Fatal("no connection was verifiably refreshed — check logs for reauth flags or transient failures above")
 	}
 	t.Logf("verified %d connection(s) genuinely refreshed", refreshed)
+}
+
+func (r *postgresRepo) ReleaseClaim(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE meta_connections SET refresh_claimed_at = NULL WHERE id = $1`, id)
+	return err
 }

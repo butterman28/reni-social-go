@@ -54,10 +54,47 @@ func StartIGContainerFinalizer(db *sql.DB) {
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func finalizeIGContainers(db *sql.DB) error {
-	// 10s timeout just for the DB query to fetch pending items
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Bumped context slightly to 15s to comfortably accommodate the extra cleanup query
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	// ── STEP 1: Kill stuck containers older than 1 hour ──
+	_, err := db.ExecContext(ctx, `
+		UPDATE publish_results
+		SET status = 'failed',
+		    fail_reason = 'Instagram container timed out after 1 hour of processing',
+		    updated_at = NOW()
+		WHERE platform = 'meta_ig'
+		  AND status = 'processing'
+		  AND container_id IS NOT NULL
+		  AND created_at < NOW() - INTERVAL '1 hour'
+	`)
+	if err != nil {
+		return fmt.Errorf("cleanup stuck containers: %w", err)
+	}
+
+	// ── STEP 1.5: Finalize any posts whose containers just timed out ──
+	// Now that the individual platform results are marked as failed, update the 
+	// parent post status so it doesn't stay stuck in 'publishing' forever.
+	_, err = db.ExecContext(ctx, `
+		UPDATE posts SET status = 'failed',
+			fail_reason = 'Instagram video processing timed out',
+			updated_at = NOW()
+		WHERE id IN (
+			SELECT DISTINCT post_id FROM publish_results
+			WHERE platform = 'meta_ig'
+			  AND status = 'failed'
+			  AND fail_reason LIKE '%timed out%'
+			  AND updated_at > NOW() - INTERVAL '5 seconds'
+		)
+		AND status = 'publishing'
+	`)
+	if err != nil {
+		log.Printf("  [IG Finalizer] error finalizing timed out parent posts: %v", err)
+		// We log but don't return, so we can still proceed to poll active containers
+	}
+
+	// ── STEP 2: Only poll containers created within the last hour ──
 	rows, err := db.QueryContext(ctx, `
 		SELECT
 			pr.id::text,
@@ -71,6 +108,7 @@ func finalizeIGContainers(db *sql.DB) error {
 		WHERE pr.platform = 'meta_ig'
 		  AND pr.status   = 'processing'
 		  AND pr.container_id IS NOT NULL
+		  AND pr.created_at > NOW() - INTERVAL '1 hour'
 	`)
 	if err != nil {
 		return fmt.Errorf("query pending containers: %w", err)
@@ -133,18 +171,15 @@ func finalizeIGContainers(db *sql.DB) error {
 				igPostID, err := publishIGContainer(apiCtx, p.containerID, p.accountID, p.accessToken)
 				if err != nil {
 					log.Printf(" [IG Finalizer] publish container %s: %v", p.containerID, err)
-					//  FIXED: Swapped p.resultID and p.postID to match UpdatePublishResult signature
 					_ = UpdatePublishResult(dbCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultFailed, "", "", err.Error())
 				} else {
 					log.Printf(" [IG Finalizer] Published IG container %s → post %s", p.containerID, igPostID)
-					//  FIXED: Swapped p.resultID and p.postID to match UpdatePublishResult signature
 					_ = UpdatePublishResult(dbCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultPublished, igPostID, "", "")
 				}
 				_ = FinalizePostStatus(dbCtx, db, p.postID, p.attemptID)
 
 			case "ERROR", "EXPIRED":
 				log.Printf(" [IG Finalizer] Container %s → %s", p.containerID, status)
-				//  FIXED: Swapped p.resultID and p.postID to match UpdatePublishResult signature
 				_ = UpdatePublishResult(dbCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultFailed, "", "", "Instagram container "+status)
 				_ = FinalizePostStatus(dbCtx, db, p.postID, p.attemptID)
 

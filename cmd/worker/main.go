@@ -41,11 +41,7 @@ func main() {
 			RequestTimeout:    30 * time.Second,
 			BackoffBase:       1 * time.Second,
 		}
-		
-		refresher := meta.NewRefresher(cfg, repo)
-		
-		// Start blocks forever on a ticker. If it panics, the supervisor 
-		// catches it and restarts it automatically.
+		refresher := meta.NewRefresher(cfg, repo, notify.MetaReauthNotifier{})
 		ctx := context.Background()
 		refresher.Start(ctx)
 	}, "Meta Token Refresher")

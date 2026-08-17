@@ -79,6 +79,7 @@ func publishPost(db *sql.DB, postID string) {
 		_ = markPostFailed(dbCtx, db, postID, err.Error())
 		return
 	}
+	
 
 	if post.CurrentPublishAttemptID == nil {
 		log.Printf(" [Consumer] post %s has no attempt ID", postID)
@@ -86,6 +87,18 @@ func publishPost(db *sql.DB, postID string) {
 		return
 	}
 	attemptID := *post.CurrentPublishAttemptID
+
+	have := make(map[domain.Platform]bool)
+	for _, c := range connections {
+		have[c.Platform] = true
+	}
+	for _, p := range post.Platforms {
+		if !have[p] {
+			_ = InsertPublishResult(dbCtx, db, postID, attemptID, string(p), uuid.Nil,
+				ResultFailed, "", "", "",
+				fmt.Sprintf("%s: no active connection (deleted, expired, or needs re-auth)", p))
+		}
+	}
 
 	perPlatformTimeout := time.Duration(config.C.PublishTimeoutMinutes) * time.Minute
 
@@ -261,6 +274,7 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 	if len(platforms) == 0 {
 		return nil, nil
 	}
+
 	var conns []*domain.PlatformConnection
 	hasLinkedIn := false
 	hasMeta := false
@@ -275,10 +289,15 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			hasX = true
 		}
 	}
+
 	if hasLinkedIn {
 		rows, err := db.QueryContext(ctx, `
 			SELECT id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM linkedin_connections WHERE workspace_id = $1
+			FROM linkedin_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND needs_reauth = false
+			  AND expires_at > NOW()
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -292,10 +311,15 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			conns = append(conns, c)
 		}
 	}
+
 	if hasMeta {
 		rows, err := db.QueryContext(ctx, `
 			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM meta_connections WHERE workspace_id = $1
+			FROM meta_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND needs_reauth = false
+			  AND expires_at > NOW()
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -320,10 +344,14 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			}
 		}
 	}
+
 	if hasX {
 		rows, err := db.QueryContext(ctx, `
 			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM x_connections WHERE workspace_id = $1
+			FROM x_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND (expires_at IS NULL OR expires_at > NOW())
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -339,6 +367,7 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			conns = append(conns, c)
 		}
 	}
+
 	return conns, nil
 }
 

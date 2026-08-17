@@ -465,8 +465,8 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	if len(platforms) == 0 {
 		return nil, nil
 	}
-	var conns []*domain.PlatformConnection
 
+	var conns []*domain.PlatformConnection
 	hasLinkedIn := false
 	hasMeta := false
 	hasX := false
@@ -484,7 +484,11 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	if hasLinkedIn {
 		rows, err := db.DB.QueryContext(ctx, `
 			SELECT id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM linkedin_connections WHERE workspace_id = $1
+			FROM linkedin_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND needs_reauth = false
+			  AND expires_at > NOW()
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -502,7 +506,11 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	if hasMeta {
 		rows, err := db.DB.QueryContext(ctx, `
 			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM meta_connections WHERE workspace_id = $1
+			FROM meta_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND needs_reauth = false
+			  AND expires_at > NOW()
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -531,7 +539,10 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	if hasX {
 		rows, err := db.DB.QueryContext(ctx, `
 			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM x_connections WHERE workspace_id = $1
+			FROM x_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND (expires_at IS NULL OR expires_at > NOW())
 		`, workspaceID)
 		if err != nil {
 			return nil, err
