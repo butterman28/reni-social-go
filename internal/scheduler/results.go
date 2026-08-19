@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"reni-social/internal/utils"
 	"reni-social/pkg/config"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // PublishResultStatus mirrors the lifecycle of a single platform publish.
@@ -241,25 +243,37 @@ func FinalizePostStatus(ctx context.Context, db *sql.DB, postID string, attemptI
 
 		var retryCount, maxRetries int
 		pErr := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
+		// Inside FinalizePostStatus, replace the retry block:
 		if pErr == nil && retryCount < maxRetries {
 			newAttemptID := uuid.New()
 			newRetryCount := retryCount + 1
-			log.Printf("🔄 [Scheduler] Retrying post %s (attempt %d/%d) after platform failure: %s", postID, newRetryCount, maxRetries, reason)
+
+			// 🆕 Exponential backoff: 10s, 20s, 40s... capped at 5 minutes
+			delay := time.Duration(math.Pow(2, float64(newRetryCount-1))) * 10 * time.Second
+			if delay > 5*time.Minute {
+				delay = 5 * time.Minute
+			}
+			score := float64(time.Now().Add(delay).Unix())
+
+			log.Printf("🔄 [Scheduler] Scheduling retry for post %s (attempt %d/%d) in %v after platform failure: %s", postID, newRetryCount, maxRetries, delay, reason)
 
 			_, updateErr := db.ExecContext(ctx, `
-				UPDATE posts
-				SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
-				WHERE id = $4
-			`, newRetryCount, newAttemptID, reason, postID)
+UPDATE posts
+SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
+WHERE id = $4
+`, newRetryCount, newAttemptID, reason, postID)
 			if updateErr != nil {
 				return updateErr
 			}
 
-			if enqueueErr := utils.RDB.LPush(utils.Ctx, config.C.ScheduledPostsQueue, postID).Err(); enqueueErr != nil {
-				log.Printf("⚠️  [Scheduler] Failed to re-enqueue post %s for retry: %v", postID, enqueueErr)
-			} else {
-				return nil
+			// 🆕 Add to Redis sorted set for delayed retry (replaces immediate LPUSH)
+			if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
+				Score:  score,
+				Member: postID,
+			}).Err(); zaddErr != nil {
+				log.Printf("⚠️  [Scheduler] Failed to schedule retry for post %s: %v", postID, zaddErr)
 			}
+			return nil
 		}
 
 		_, err = db.ExecContext(ctx, `

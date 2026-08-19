@@ -1,6 +1,7 @@
 import os
 import re
 
+
 def parse_go_functions(lines):
     """Parses all Go function signatures in a list of lines."""
     functions = []
@@ -8,72 +9,75 @@ def parse_go_functions(lines):
     while i < len(lines):
         line = lines[i]
         # Match standard Go function declarations (handles methods with receivers too)
-        match = re.match(r'^func\s+(?:\([^)]+\)\s+)?([A-Za-z0-9_]+)\s*\(', line)
+        match = re.match(r"^func\s+(?:\([^)]+\)\s+)?([A-Za-z0-9_]+)\s*\(", line)
         if match:
             func_name = match.group(1)
             sig_lines = [line]
             start_i = i
-            
+
             # Read until we hit the opening brace '{' of the function body
-            while '{' not in line and i + 1 < len(lines):
+            while "{" not in line and i + 1 < len(lines):
                 i += 1
                 line = lines[i]
                 sig_lines.append(line)
-                
+
             sig = "".join(sig_lines).replace("\n", " ").replace("\r", "")
-            
+
             # Skip receiver parenthesis if it exists
             if sig.startswith("func ("):
                 depth = 0
                 open_paren = -1
                 for idx, char in enumerate(sig):
-                    if char == '(':
+                    if char == "(":
                         depth += 1
                         if depth == 1 and open_paren == -1:
                             open_paren = idx
-                    elif char == ')':
+                    elif char == ")":
                         depth -= 1
                         if depth == 0:
-                            open_paren = sig.find('(', idx)
+                            open_paren = sig.find("(", idx)
                             break
             else:
-                open_paren = sig.find('(')
-                
+                open_paren = sig.find("(")
+
             if open_paren != -1:
                 depth = 0
                 remaining_sig = ""
                 for idx in range(open_paren, len(sig)):
-                    if sig[idx] == '(':
+                    if sig[idx] == "(":
                         depth += 1
-                    elif sig[idx] == ')':
+                    elif sig[idx] == ")":
                         depth -= 1
                         if depth == 0:
-                            args_str = sig[open_paren+1:idx]
-                            remaining_sig = sig[idx+1:]
+                            args_str = sig[open_paren + 1 : idx]
+                            remaining_sig = sig[idx + 1 :]
                             break
-                
+
                 remaining_sig = remaining_sig.strip()
-                if remaining_sig.startswith('{'):
+                if remaining_sig.startswith("{"):
                     returns_str = ""
-                elif remaining_sig.startswith('('):
-                    close_paren = remaining_sig.find(')')
+                elif remaining_sig.startswith("("):
+                    close_paren = remaining_sig.find(")")
                     returns_str = remaining_sig[1:close_paren]
                 else:
-                    brace_idx = remaining_sig.find('{')
+                    brace_idx = remaining_sig.find("{")
                     if brace_idx != -1:
                         returns_str = remaining_sig[:brace_idx].strip()
                     else:
                         returns_str = remaining_sig.strip()
-                
-                functions.append({
-                    "name": func_name,
-                    "args": args_str,
-                    "returns": returns_str,
-                    "start_idx": start_i,
-                    "end_idx": i
-                })
+
+                functions.append(
+                    {
+                        "name": func_name,
+                        "args": args_str,
+                        "returns": returns_str,
+                        "start_idx": start_i,
+                        "end_idx": i,
+                    }
+                )
         i += 1
     return functions
+
 
 def get_swagger_annotations(func_name, args_str, returns_str, pkg_name, handlers_map):
     """Generates Swagger tags based on function signature and route data."""
@@ -88,7 +92,15 @@ def get_swagger_annotations(func_name, args_str, returns_str, pkg_name, handlers
     # 🛑 GUARD: Skip functions returning fiber.Handler or raw func
     is_middleware = False
     if returns_str.strip():
-        if any(bad_type in returns_str for bad_type in ["fiber.Handler", "func(", "http.Handler", "gin.HandlerFunc"]):
+        if any(
+            bad_type in returns_str
+            for bad_type in [
+                "fiber.Handler",
+                "func(",
+                "http.Handler",
+                "gin.HandlerFunc",
+            ]
+        ):
             is_middleware = True
 
     if is_middleware and not is_handler:
@@ -100,68 +112,92 @@ def get_swagger_annotations(func_name, args_str, returns_str, pkg_name, handlers
     annotations.append(f"// @Description Auto-generated documentation for {func_name}")
     annotations.append(f"// @Tags {pkg_name}")
     annotations.append(f"// @Produce json")
-    
+
     method = ""
     if is_handler:
         method, full_path = routes[0]
         if "/api/in" in full_path:
             annotations.append(f"// @Security BearerAuth")
             annotations.append(f"// @Security SessionId")
-            
+
         path_params = re.findall(r":(\w+)", full_path)
         for p in path_params:
             annotations.append(f'// @Param {p} path string true "{p}"')
-            
-        if "/posts" in full_path and method == "GET" and not full_path.endswith("/results"):
-            annotations.append(f'// @Param workspace_id query string true "Workspace ID"')
+
+        if (
+            "/posts" in full_path
+            and method == "GET"
+            and not full_path.endswith("/results")
+        ):
+            annotations.append(
+                f'// @Param workspace_id query string true "Workspace ID"'
+            )
         if full_path.endswith("/results") and method == "GET":
-            annotations.append(f'// @Param attempt_id query string true "Publish attempt ID"')
-            
+            annotations.append(
+                f'// @Param attempt_id query string true "Publish attempt ID"'
+            )
+
         for r_method, r_path in routes:
             r_swagger_path = re.sub(r":(\w+)", r"{\1}", r_path)
             annotations.append(f"// @Router {r_swagger_path} [{r_method.lower()}]")
 
     # Parse Arguments to @Param
     if args_str.strip():
-        args = [a.strip() for a in args_str.split(',')]
+        args = [a.strip() for a in args_str.split(",")]
         for arg in args:
-            if not arg: continue
+            if not arg:
+                continue
             parts = arg.split()
             if len(parts) >= 2:
                 arg_name = parts[0]
                 arg_type = " ".join(parts[1:])
-                
+
                 # Ignore non-serializable parameters
-                if any(x in arg_type for x in ["fiber.Ctx", "Context", "fiber.Handler", "func("]):
+                if any(
+                    x in arg_type
+                    for x in ["fiber.Ctx", "Context", "fiber.Handler", "func("]
+                ):
                     continue
-                
+
                 swag_type = "string"
-                if "int" in arg_type: swag_type = "integer"
-                elif "bool" in arg_type: swag_type = "boolean"
-                elif "float" in arg_type: swag_type = "number"
-                elif "*" in arg_type or "struct" in arg_type or "map" in arg_type: swag_type = "object"
-                elif "[]" in arg_type: swag_type = "array"
-                
+                if "int" in arg_type:
+                    swag_type = "integer"
+                elif "bool" in arg_type:
+                    swag_type = "boolean"
+                elif "float" in arg_type:
+                    swag_type = "number"
+                elif "*" in arg_type or "struct" in arg_type or "map" in arg_type:
+                    swag_type = "object"
+                elif "[]" in arg_type:
+                    swag_type = "array"
+
                 if swag_type in ("object", "array"):
                     clean_type = arg_type.replace("*", "").replace("[]", "")
                     if len(clean_type) > 0 and clean_type[0].isupper():
-                        annotations.append(f'// @Param {arg_name} body {clean_type} true "{arg_name}"')
+                        annotations.append(
+                            f'// @Param {arg_name} body {clean_type} true "{arg_name}"'
+                        )
                     else:
-                        annotations.append(f'// @Param {arg_name} body {swag_type} true "{arg_name}"')
+                        annotations.append(
+                            f'// @Param {arg_name} body {swag_type} true "{arg_name}"'
+                        )
                 else:
-                    annotations.append(f'// @Param {arg_name} body {swag_type} true "{arg_name}"')
+                    annotations.append(
+                        f'// @Param {arg_name} body {swag_type} true "{arg_name}"'
+                    )
 
     if not is_middleware:
         success_type = "object"
         success_model = "map[string]any"
-        
+
         if returns_str.strip():
-            returns = [r.strip() for r in returns_str.split(',')]
+            returns = [r.strip() for r in returns_str.split(",")]
             has_error = any("error" in r for r in returns)
-            
+
             for r in returns:
-                if r == "error": continue
-                
+                if r == "error":
+                    continue
+
                 parts = r.split()
                 if parts:
                     t = parts[-1]
@@ -186,24 +222,39 @@ def get_swagger_annotations(func_name, args_str, returns_str, pkg_name, handlers
                         success_model = t
                     else:
                         success_model = t
-                        
+
             success_code = "200"
             if is_handler:
                 if method == "POST":
                     success_code = "201"
                 elif method == "DELETE":
                     success_code = "204"
-                    
-            annotations.append(f'// @Success {success_code} {{{success_type}}} {success_model} "Successful operation"')
-            
+
+            annotations.append(
+                f'// @Success {success_code} {{{success_type}}} {success_model} "Successful operation"'
+            )
+
             if has_error:
-                annotations.append(f'// @Failure 400 {{object}} map[string]string "Bad Request"')
-                annotations.append(f'// @Failure 401 {{object}} map[string]string "Unauthorized"')
-                annotations.append(f'// @Failure 403 {{object}} map[string]string "Forbidden"')
-                annotations.append(f'// @Failure 404 {{object}} map[string]string "Not Found"')
-                annotations.append(f'// @Failure 500 {{object}} map[string]string "Internal Server Error"')
+                # Changed from map[string]string to types.APIResponse
+                annotations.append(
+                    f'// @Failure 400 {{object}} types.APIResponse "Bad Request"'
+                )
+                annotations.append(
+                    f'// @Failure 401 {{object}} types.APIResponse "Unauthorized"'
+                )
+                annotations.append(
+                    f'// @Failure 403 {{object}} types.APIResponse "Forbidden"'
+                )
+                annotations.append(
+                    f'// @Failure 404 {{object}} types.APIResponse "Not Found"'
+                )
+                annotations.append(
+                    f'// @Failure 500 {{object}} types.APIResponse "Internal Server Error"'
+                )
             else:
-                annotations.append(f'// @Failure 500 {{object}} map[string]string "Internal Server Error"')
+                annotations.append(
+                    f'// @Failure 500 {{object}} types.APIResponse "Internal Server Error"'
+                )
         else:
             success_code = "200"
             if is_handler:
@@ -211,10 +262,15 @@ def get_swagger_annotations(func_name, args_str, returns_str, pkg_name, handlers
                     success_code = "201"
                 elif method == "DELETE":
                     success_code = "204"
-            annotations.append(f'// @Success {success_code} {{{success_type}}} {success_model} "Successful operation"')
-            annotations.append(f'// @Failure 500 {{object}} map[string]string "Internal Server Error"')
-            
+            annotations.append(
+                f'// @Success {success_code} {{{success_type}}} {success_model} "Successful operation"'
+            )
+            annotations.append(
+                f'// @Failure 500 {{object}} map[string]string "Internal Server Error"'
+            )
+
     return annotations
+
 
 def main():
     routes_file = "internal/routes/routes.go"
@@ -271,16 +327,16 @@ def main():
             continue
 
         functions = parse_go_functions(lines)
-        
+
         new_lines = []
         changed = False
         i = 0
-        
+
         for func in functions:
             while i < func["start_idx"]:
                 new_lines.append(lines[i])
                 i += 1
-                
+
             already_annotated = False
             j = func["start_idx"] - 1
             while j >= 0:
@@ -294,7 +350,7 @@ def main():
                     j -= 1
                 else:
                     break
-                    
+
             if not already_annotated:
                 annotations = get_swagger_annotations(
                     func["name"], func["args"], func["returns"], pkg_name, handlers_map
@@ -302,11 +358,11 @@ def main():
                 if annotations:
                     new_lines.extend([a + "\n" for a in annotations])
                     changed = True
-                
+
             while i <= func["end_idx"]:
                 new_lines.append(lines[i])
                 i += 1
-                
+
         while i < len(lines):
             new_lines.append(lines[i])
             i += 1
@@ -318,6 +374,7 @@ def main():
             print(f"✅ Annotated: {filepath}")
 
     print(f"\n🎉 Done! Injected Swagger comments into {modified_count} files.")
+
 
 if __name__ == "__main__":
     main()

@@ -23,7 +23,6 @@ var (
 // @Description Auto-generated thorough documentation for getRedisStore
 // @Tags middleware
 // @Produce json
-// @Success 200 {object} fiber.Storage "Successful operation"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func getRedisStore() fiber.Storage {
 	redisStoreOnce.Do(func() {
@@ -82,7 +81,7 @@ func RedisRateLimiter(max int, expiration time.Duration) fiber.Handler {
 // @Produce json
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func StrictAuthLimiter() fiber.Handler {
-	return RedisRateLimiter(5, 1*time.Minute)
+	return RedisRateLimiter(50, 1*time.Minute)
 }
 
 // GeneralApiLimiter provides baseline API limits (60 req/min) for general endpoints
@@ -93,5 +92,5 @@ func StrictAuthLimiter() fiber.Handler {
 // @Produce json
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func GeneralApiLimiter() fiber.Handler {
-	return RedisRateLimiter(60, 1*time.Minute)
+	return RedisRateLimiter(300, 1*time.Minute)
 }

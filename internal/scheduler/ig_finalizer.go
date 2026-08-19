@@ -16,6 +16,11 @@ import (
 	"github.com/google/uuid"
 )
 
+//  FIX: Reusable, thread-safe HTTP clients for the IG Finalizer
+var (
+    igStatusClient  = &http.Client{Timeout: 10 * time.Second}
+    igPublishClient = &http.Client{Timeout: 15 * time.Second}
+)
 // StartIGContainerFinalizer polls for Instagram video containers still in
 // 'processing'. When one reaches FINISHED it publishes the container and
 // updates publish_results + the parent post status.
@@ -217,9 +222,7 @@ func checkIGContainerStatus(ctx context.Context, containerID, accessToken string
 		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := igStatusClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -263,8 +266,7 @@ func publishIGContainer(ctx context.Context, containerID, accountID, accessToken
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	// Bumped timeout slightly to survive Meta's intentional throttling during bursts
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := igPublishClient.Do(req)
 	if err != nil {
 		return "", err
 	}

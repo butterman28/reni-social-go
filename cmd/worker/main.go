@@ -26,6 +26,7 @@ func main() {
 	go supervise(scheduler.StartConsumer, "Post Queue Consumer")
 	go supervise(scheduler.StartIGContainerFinalizer, "IG Container Finalizer")
 	go supervise(media.StartMediaWorker, "Media Processing Worker")
+	go supervise(scheduler.StartRetryPoller, "Post Retry Poller") 
 	go supervise(func(*sql.DB) { notify.StartNotifyWorker() }, "Notification Worker")
 
 	// ═══════════════════════════════════════════════════════

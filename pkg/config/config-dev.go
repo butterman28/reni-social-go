@@ -73,6 +73,7 @@ func init() {
 		// Scheduler
 		SchedulerPollIntervalSecs: 30,
 		ScheduledPostsQueue:       "social:post_queue_dev",
+		RetryPostsQueue:           "social:post_retry_queue_dev",
 		MaxConcurrentPublishes:    25,
 		PublishTimeoutMinutes:     5,
 

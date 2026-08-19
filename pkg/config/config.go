@@ -67,8 +67,9 @@ type Config struct {
 	// ──────────────────────────────────────────
 	SchedulerPollIntervalSecs int    // e.g. 30
 	ScheduledPostsQueue       string // Redis key, e.g. "social:post_queue"
-	MaxConcurrentPublishes    int    
-	PublishTimeoutMinutes     int  
+	RetryPostsQueue           string // Redis sorted set for delayed retries
+	MaxConcurrentPublishes    int
+	PublishTimeoutMinutes     int
 
 	// ──────────────────────────────────────────
 	// Media Worker

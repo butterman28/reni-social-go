@@ -14,6 +14,19 @@ type MetaReauthNotifier struct{}
 
 var _ meta.Notifier = MetaReauthNotifier{}
 
+// NotifyReauthRequired godoc
+// @Summary NotifyReauthRequired
+// @Description Auto-generated documentation for NotifyReauthRequired
+// @Tags notify
+// @Produce json
+// @Param conn body string true "conn"
+// @Param reason body string true "reason"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} types.APIResponse "Bad Request"
+// @Failure 401 {object} types.APIResponse "Unauthorized"
+// @Failure 403 {object} types.APIResponse "Forbidden"
+// @Failure 404 {object} types.APIResponse "Not Found"
+// @Failure 500 {object} types.APIResponse "Internal Server Error"
 func (MetaReauthNotifier) NotifyReauthRequired(_ context.Context, conn meta.MetaConnection, reason string) error {
 	if conn.OwnerEmail == "" {
 		return nil

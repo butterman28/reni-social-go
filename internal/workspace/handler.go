@@ -323,6 +323,23 @@ func ConnectPlatform(c *fiber.Ctx) error {
 		})
 	}
 
+	switch p {
+	case "linkedin":
+			if config.C.LinkedInClientID == "" || config.C.LinkedInClientSecret == "" {
+				return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+					Status:  false,
+					Message: "LinkedIn client credentials are not configured. Please contact support.",
+				})
+			}
+		case "meta":
+			if config.C.InstagramAppID == "" || config.C.InstagramAppSecret == "" {
+				return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+					Status:  false,
+					Message: "Instagram (Meta) client credentials are not configured. Please contact support.",
+				})
+			}
+		}
+
 		// ?force=true bypasses the "already connected" short-circuit so the
 	// frontend's Reconnect button can always trigger a fresh OAuth flow
 	// (needed when a connection is flagged needs_reauth but not yet expired).

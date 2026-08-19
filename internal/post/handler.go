@@ -3,12 +3,13 @@ package post
 import (
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-
 	"reni-social/internal/domain"
 	"reni-social/internal/scheduler"
+	"reni-social/internal/workspace"
 	"reni-social/pkg/db"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 // Create handles POST /api/posts
@@ -23,17 +24,20 @@ import (
 // @Router /api/in/posts [post]
 func Create(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
-
 	var req CreatePostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	
+	// 🔒 AUTHORIZATION CHECK: Verify user is a member of the target workspace
+	if _, err := workspace.GetWorkspace(c.Context(), req.WorkspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
 	}
 
 	post, err := CreatePost(c.Context(), userID, req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"post": post})
 }
 
@@ -54,9 +58,15 @@ func Create(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func List(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
+	}
+	
+	// 🔒 AUTHORIZATION CHECK
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
 	}
 
 	filter := PostFilter{
@@ -64,12 +74,10 @@ func List(c *fiber.Ctx) error {
 		Page:   c.QueryInt("page", 0),
 		Limit:  c.QueryInt("limit", 20),
 	}
-
 	posts, err := ListPosts(c.Context(), workspaceID, filter)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.JSON(fiber.Map{"posts": posts, "page": filter.Page, "limit": filter.Limit})
 }
 
@@ -86,17 +94,22 @@ func List(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string
 // @Router /api/in/posts/in/{id} [get]
 func Get(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
+	}
+	
+	// 🔒 AUTHORIZATION CHECK
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
 	}
 
 	post, err := GetPost(c.Context(), postID, workspaceID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.JSON(fiber.Map{"post": post})
 }
 
@@ -117,22 +130,26 @@ func Get(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func Update(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
+	}
+	
+	// 🔒 AUTHORIZATION CHECK
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
 	}
 
 	var req UpdatePostRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
-
 	post, err := UpdatePost(c.Context(), postID, workspaceID, req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.JSON(fiber.Map{"post": post})
 }
 
@@ -148,16 +165,21 @@ func Update(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string
 // @Router /api/in/posts/in/{id} [delete]
 func Delete(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
+	
+	// 🔒 AUTHORIZATION CHECK
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
+	}
 
 	if err := DeletePost(c.Context(), postID, workspaceID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.JSON(fiber.Map{"message": "post deleted"})
 }
 
@@ -178,18 +200,23 @@ func Delete(c *fiber.Ctx) error {
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func Publish(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
 	
+	// 🔒 AUTHORIZATION CHECK
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
+	}
+
 	// Call the updated service that returns the attemptID
 	attemptID, err := PublishNow(c.Context(), postID, workspaceID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-	
 	//Tell the frontend to start tracking this specific attempt
 	return c.JSON(fiber.Map{
 		"message":    "publishing_initiated",
@@ -209,24 +236,28 @@ func Publish(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string
 // @Router /api/in/posts/in/{id}/schedule [post]
 func Schedule(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
 	workspaceID := c.Query("workspace_id")
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
+	
+	// 🔒 AUTHORIZATION CHECK
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
+	}
 
 	var body struct {
-		ScheduledAt time.Time `json:"scheduled_at"`
+		ScheduledAt time.Time         `json:"scheduled_at"`
 		Platforms   []domain.Platform `json:"platforms"`
 	}
 	if err := c.BodyParser(&body); err != nil || body.ScheduledAt.IsZero() {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "scheduled_at (ISO8601) is required"})
 	}
-
 	if err := SchedulePost(c.Context(), postID, workspaceID, body.ScheduledAt); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	return c.JSON(fiber.Map{"message": "post scheduled", "scheduled_at": body.ScheduledAt})
 }
 
@@ -245,8 +276,18 @@ func Schedule(c *fiber.Ctx) error {
 // @Failure 400 {object} map[string]string
 // @Router /api/in/posts/in/{id}/results [get]
 func Results(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
 	attemptID := c.Query("attempt_id")
+	
+	// 🔒 AUTHORIZATION CHECK (workspace_id is now strictly required to poll results)
+	workspaceID := c.Query("workspace_id")
+	if workspaceID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
+	}
+	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
+	}
 
 	// Fast path: read from Redis cache
 	if attemptID != "" {
@@ -258,27 +299,24 @@ func Results(c *fiber.Ctx) error {
 			}
 		}
 	}
-
 	// Fallback: Postgres
 	query := `
-		SELECT id::text, platform, status, platform_post_id, platform_post_url,
-		       container_id, fail_reason, created_at, updated_at
-		FROM publish_results
-		WHERE post_id = $1
-	`
+SELECT id::text, platform, status, platform_post_id, platform_post_url,
+container_id, fail_reason, created_at, updated_at
+FROM publish_results
+WHERE post_id = $1
+`
 	args := []any{postID}
 	if attemptID != "" {
 		query += " AND publish_attempt_id = $2"
 		args = append(args, attemptID)
 	}
 	query += " ORDER BY created_at ASC"
-
 	rows, err := db.DB.QueryContext(c.Context(), query, args...)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	defer rows.Close()
-
 	type resultRow struct {
 		ID             string    `json:"id"`
 		Platform       string    `json:"platform"`

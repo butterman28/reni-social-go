@@ -415,9 +415,9 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 		// Query LinkedIn (includes re-auth flag so the frontend can show a banner)
 	rowsLI, err := db.DB.QueryContext(ctx, `
 		SELECT id, workspace_id, account_id, account_name, expires_at, created_at,
-		       is_deleted, needs_reauth, reauth_reason
+		is_deleted, needs_reauth, reauth_reason
 		FROM linkedin_connections
-		WHERE workspace_id = $1
+		WHERE workspace_id = $1 AND is_deleted = false
 	`, workspaceID)
 	if err == nil {
 		defer rowsLI.Close()
@@ -437,9 +437,9 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 	// Query Meta
 	rowsMeta, err := db.DB.QueryContext(ctx, `
 		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at,
-		       is_deleted, needs_reauth, reauth_reason
+		is_deleted, needs_reauth, reauth_reason
 		FROM meta_connections
-		WHERE workspace_id = $1
+		WHERE workspace_id = $1 AND is_deleted = false
 	`, workspaceID)
 	if err == nil {
 		defer rowsMeta.Close()
@@ -461,8 +461,8 @@ func ListConnections(ctx context.Context, workspaceID, userID string) ([]domain.
 	// Query X
 	rowsX, err := db.DB.QueryContext(ctx, `
 		SELECT id, workspace_id, platform, account_id, account_name, expires_at, created_at, is_deleted
-		FROM x_connections 
-		WHERE workspace_id = $1
+		FROM x_connections
+		WHERE workspace_id = $1 AND is_deleted = false
 	`, workspaceID)
 	if err == nil {
 		defer rowsX.Close()
@@ -595,7 +595,7 @@ func GetXConnectionByID(ctx context.Context, workspaceID, connectionID string) (
 	var platformStr string
 	err := db.DB.QueryRowContext(ctx, `
 		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-		FROM x_connections WHERE workspace_id = $1 AND id = $2
+		FROM x_connections WHERE workspace_id = $1 AND id = $2 AND is_deleted = false
 	`, workspaceID, connectionID).Scan(
 		&c.ID, &c.WorkspaceID, &platformStr, &c.AccountID, &c.AccountName,
 		&c.AccessToken, &c.RefreshToken, &c.ExpiresAt, &c.CreatedAt,
@@ -635,7 +635,7 @@ func GetXConnection(ctx context.Context, workspaceID, connectionID string) (*dom
 	var platformStr string
 	err := db.DB.QueryRowContext(ctx, `
 		SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-		FROM x_connections WHERE workspace_id = $1
+		FROM x_connections WHERE workspace_id = $1 AND is_deleted = false
 		ORDER BY created_at ASC
 		LIMIT 1
 	`, workspaceID).Scan(

@@ -73,7 +73,7 @@ func main() {
 	}))
 
 	app.Use(recover.New())
-	// Apply global rate limiting (e.g., max 60 requests/minute per client)
+	// Apply global rate limiting (max 300 requests/minute per client)
     app.Use(middleware.RedisRateLimiter(300, 1*time.Minute))
 	app.Options("/*", func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusNoContent)

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"reni-social/pkg/config"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // StartConsumer is the Stage 2 entry point. It blocks on BRPOP from the Redis
@@ -390,22 +392,33 @@ func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) erro
 	if err == nil && retryCount < maxRetries {
 		newAttemptID := uuid.New()
 		newRetryCount := retryCount + 1
-		log.Printf("🔄 [Consumer] Retrying post %s (attempt %d/%d) due to error: %s", postID, newRetryCount, maxRetries, reason)
+
+		// 🆕 Exponential backoff: 10s, 20s, 40s... capped at 5 minutes
+		delay := time.Duration(math.Pow(2, float64(newRetryCount-1))) * 10 * time.Second
+		if delay > 5*time.Minute {
+			delay = 5 * time.Minute
+		}
+		score := float64(time.Now().Add(delay).Unix())
+
+		log.Printf("🔄 [Consumer] Scheduling retry for post %s (attempt %d/%d) in %v due to error: %s", postID, newRetryCount, maxRetries, delay, reason)
 
 		_, updateErr := db.ExecContext(ctx, `
-			UPDATE posts
-			SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
-			WHERE id = $4
-		`, newRetryCount, newAttemptID, reason, postID)
+UPDATE posts
+SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
+WHERE id = $4
+`, newRetryCount, newAttemptID, reason, postID)
 		if updateErr != nil {
 			return updateErr
 		}
 
-		if enqueueErr := utils.RDB.LPush(utils.Ctx, config.C.ScheduledPostsQueue, postID).Err(); enqueueErr != nil {
-			log.Printf("⚠️  [Consumer] Failed to re-enqueue post %s for retry: %v", postID, enqueueErr)
-		} else {
-			return nil
+		// 🆕 Add to Redis sorted set for delayed retry (replaces immediate LPUSH)
+		if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
+			Score:  score,
+			Member: postID,
+		}).Err(); zaddErr != nil {
+			log.Printf("⚠️  [Consumer] Failed to schedule retry for post %s: %v", postID, zaddErr)
 		}
+		return nil
 	}
 
 	_, err = db.ExecContext(ctx,
@@ -413,7 +426,6 @@ func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) erro
 		reason, postID)
 	return err
 }
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Platform adapter factory
 // ──────────────────────────────────────────────────────────────────────────────
