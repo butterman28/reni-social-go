@@ -30,22 +30,21 @@ const (
 
 // Post is the core content entity.
 type Post struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	AuthorID    uuid.UUID
-	Content     string
-	MediaURLs   []string   // stored as JSONB in DB
-	Platforms   []Platform // stored as JSONB in DB
-	//optional for linkedin 
-	ArticleURL   string
-	ArticleTitle string
-	Status      PostStatus
-	ScheduledAt *time.Time
-	PublishedAt *time.Time
-	FailReason  string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	CurrentPublishAttemptID *uuid.UUID //`json:"current_publish_attempt_id"`
+	ID                      uuid.UUID  `json:"id"`
+	WorkspaceID             uuid.UUID  `json:"workspace_id"`
+	AuthorID                uuid.UUID  `json:"author_id"`
+	Content                 string     `json:"content"`
+	MediaURLs               []string   `json:"media_urls"`
+	Platforms               []Platform `json:"platforms"`
+	ArticleURL              string     `json:"article_url"`
+	ArticleTitle            string     `json:"article_title"`
+	Status                  PostStatus `json:"status"`
+	ScheduledAt             *time.Time `json:"scheduled_at"`
+	PublishedAt             *time.Time `json:"published_at"`
+	FailReason              string     `json:"fail_reason"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	CurrentPublishAttemptID *uuid.UUID `json:"current_publish_attempt_id"`
 	RetryCount              int        `json:"retry_count"`
 	MaxRetries              int        `json:"max_retries"`
 }

@@ -264,14 +264,14 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostRequest) (*domain.Post, error) {
-	existing, err := GetPost(ctx, postID, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
-		return nil, fmt.Errorf("cannot edit a post that has already been published")
-	}
-
+    existing, err := GetPost(ctx, postID, workspaceID)
+    if err != nil {
+        return nil, err
+    }
+    if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
+        return nil, fmt.Errorf("cannot edit a post that has already been published")
+    }
+	
 	if req.Content != nil {
 		existing.Content = *req.Content
 	}
@@ -288,9 +288,14 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 		existing.ArticleTitle = *req.ArticleTitle
 	}
 	if req.ScheduledAt != nil {
-		existing.ScheduledAt = req.ScheduledAt
-		existing.Status = domain.StatusScheduled
-	}
+        // NEW: Same future-date guard as CreatePost / SchedulePost
+        if req.ScheduledAt.Before(time.Now()) {
+            return nil, fmt.Errorf("scheduled_at must be in the future")
+        }
+        existing.ScheduledAt = req.ScheduledAt
+        existing.Status = domain.StatusScheduled
+    }
+
 	//Determine final state and validate for article shares
 	finalPlatforms := existing.Platforms
 	if req.Platforms != nil {
@@ -367,15 +372,53 @@ func DeletePost(ctx context.Context, postID, workspaceID string) error {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
-func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time) error {
-	if scheduledAt.Before(time.Now()) {
-		return fmt.Errorf("scheduled_at must be in the future")
-	}
-	_, err := db.DB.ExecContext(ctx, `
-		UPDATE posts SET status='scheduled', scheduled_at=$1, updated_at=NOW()
-		WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled')
-	`, scheduledAt, postID, workspaceID)
-	return err
+// SchedulePost sets or updates the scheduled time for an existing post.
+// It also optionally updates the target platforms if provided.
+func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time, platforms []domain.Platform) error {
+    if scheduledAt.Before(time.Now()) {
+        return fmt.Errorf("scheduled_at must be in the future")
+    }
+
+    // 1. If platforms are provided, we need to fetch the post to validate them 
+    // (e.g., ensuring article URLs aren't sent to IG/TikTok)
+    if platforms != nil {
+        existing, err := GetPost(ctx, postID, workspaceID)
+        if err != nil {
+            return err
+        }
+        
+        if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
+            return fmt.Errorf("cannot edit a post that has already been published")
+        }
+
+        existing.Platforms = platforms
+        existing.ScheduledAt = &scheduledAt
+        existing.Status = domain.StatusScheduled
+
+        // Validate article URL compatibility
+        if existing.ArticleURL != "" {
+            if err := validateArticlePlatforms(existing.Platforms); err != nil {
+                return err
+            }
+        }
+
+        platformJSON, _ := json.Marshal(existing.Platforms)
+        _, err = db.DB.ExecContext(ctx, `
+            UPDATE posts 
+            SET status=$1, scheduled_at=$2, platforms=$3::jsonb, updated_at=NOW()
+            WHERE id=$4 AND workspace_id=$5
+        `, string(existing.Status), existing.ScheduledAt, platformJSON, postID, workspaceID)
+        
+        return err
+    }
+
+    // 2. Fallback: If no platforms were sent, just update the time (original behavior)
+    _, err := db.DB.ExecContext(ctx, `
+    UPDATE posts SET status='scheduled', scheduled_at=$1, updated_at=NOW()
+    WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled')
+    `, scheduledAt, postID, workspaceID)
+    
+    return err
 }
 
 // PublishNow enqueues a post to Redis for asynchronous publishing by the background worker.

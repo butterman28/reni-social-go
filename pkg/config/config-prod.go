@@ -4,11 +4,12 @@
 package config
 
 func init() {
+	prodBackURL := "https://srv.fireswitch.ng:1046"
 	C = &Config{
 		Port:    "1046",
 		IsDev:   false,
 		BackUrl: "https://srv.fireswitch.ng:1046",
-
+		ZombiePostTimeoutMinutes: 15, 
 		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_live?sslmode=disable"),
 
 		USE_TLS:   true,
@@ -29,19 +30,18 @@ func init() {
 		// LinkedIn (prod — set via environment / secrets manager)
 		LinkedInClientID:     "CHANGE_ME",
 		LinkedInClientSecret: "CHANGE_ME",
-		LinkedInRedirectURL:  "https://srv.fireswitch.ng:1041/api/workspaces/connect/linkedin/callback",
-
+		LinkedInRedirectURL:  prodBackURL + "/api/workspaces/connect/linkedin/callback", 
 		// Meta (prod)
 		MetaAppID:       "CHANGE_ME",
 		MetaAppSecret:   "CHANGE_ME",
-		MetaRedirectURL: "https://srv.fireswitch.ng:1041/api/workspaces/connect/meta/callback",
+		MetaRedirectURL: "https://srv.fireswitch.ng:1046/api/workspaces/connect/meta/callback",
 
 		// X / Twitter (prod)
 		XAPIKey:            "CHANGE_ME",
 		XAPISecret:         "CHANGE_ME",
 		XAccessToken:       "CHANGE_ME",
 		XAccessTokenSecret: "CHANGE_ME",
-		XRedirectURL:       "https://srv.fireswitch.ng:1041/api/workspaces/connect/x/callback",
+		XRedirectURL:       "https://srv.fireswitch.ng:1046/api/workspaces/connect/x/callback",
 
 		// Scheduler
 		SchedulerPollIntervalSecs: 30,

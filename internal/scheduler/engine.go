@@ -63,34 +63,46 @@ func StartPoller(db *sql.DB) {
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func pollAndEnqueue(db *sql.DB) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
-	// Use a CTE to atomically find + update due posts in one round-trip.
-	// This prevents two pollers from picking up the same post if ever
-	// run in parallel (e.g. during a rolling deploy).
-	query := `
-		WITH due AS (
-			SELECT id FROM posts
-			WHERE status = 'scheduled'
-			AND scheduled_at <= NOW()
-			FOR UPDATE SKIP LOCKED
-		)
-		UPDATE posts
-		SET status = 'publishing', 
-			updated_at = NOW(),
-			current_publish_attempt_id = gen_random_uuid() --  GENERATE IT HERE
-		FROM due
-		WHERE posts.id = due.id
-		RETURNING posts.id::text
-	`
+    zombieTimeoutMins := config.C.ZombiePostTimeoutMinutes
+    if zombieTimeoutMins <= 0 {
+        zombieTimeoutMins = 15 // Fallback
+    }
 
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("poll query: %w", err)
-	}
-	defer rows.Close()
+    // UPDATED QUERY: Now includes zombie detection
+    query := `
+    WITH due AS (
+        SELECT id, status FROM posts
+        WHERE (
+            -- 1. Normal scheduled posts
+            (status = 'scheduled' AND scheduled_at <= NOW())
+            OR 
+            -- 2. Zombie recovery: posts stuck in 'publishing' for too long
+            (status = 'publishing' AND updated_at < NOW() - ($1 || ' minutes')::INTERVAL)
+        )
+        FOR UPDATE SKIP LOCKED
+    )
+    UPDATE posts
+    SET status = 'publishing',
+        updated_at = NOW(),
+        current_publish_attempt_id = gen_random_uuid(),
+        -- Increment retry_count ONLY for zombies to prevent infinite crash loops
+        retry_count = CASE 
+            WHEN due.status = 'publishing' THEN posts.retry_count + 1 
+            ELSE posts.retry_count 
+        END
+    FROM due
+    WHERE posts.id = due.id
+    RETURNING posts.id::text
+    `
 
+    rows, err := db.QueryContext(ctx, query, zombieTimeoutMins)
+    if err != nil {
+        return fmt.Errorf("poll query: %w", err)
+    }
+    defer rows.Close()
 	var enqueued int
 	for rows.Next() {
 		var postID string

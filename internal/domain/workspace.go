@@ -18,17 +18,17 @@ const (
 // Workspace is the top-level organisational unit.
 // A user can own or belong to multiple workspaces.
 type Workspace struct {
-	ID        uuid.UUID
-	OwnerID   uuid.UUID
-	Name      string
-	Slug      string
-	CreatedAt time.Time
+	ID        uuid.UUID `json:"id"`
+	OwnerID   uuid.UUID `json:"owner_id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // WorkspaceMember represents a user's membership in a workspace.
 type WorkspaceMember struct {
-	WorkspaceID uuid.UUID
-	UserID      uuid.UUID
-	Role        WorkspaceRole
-	JoinedAt    time.Time
+	WorkspaceID uuid.UUID       `json:"workspace_id"`
+	UserID      uuid.UUID       `json:"user_id"`
+	Role        WorkspaceRole   `json:"role"`
+	JoinedAt    time.Time       `json:"joined_at"`
 }

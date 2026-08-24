@@ -24,7 +24,7 @@ func init() {
 		Port:    "1040",
 		IsDev:   true,
 		BackUrl: "localhost:1040",
-
+		ZombiePostTimeoutMinutes: 15, 
 		DBURL: getEnv("DBURL", "postgres://reni:reni@postgres:5432/reni_social_dev?sslmode=disable"),
 
 		USE_TLS:   false,
