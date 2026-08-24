@@ -1,3 +1,4 @@
 .env
 tmp/
 docker_build/
+export_postman.go

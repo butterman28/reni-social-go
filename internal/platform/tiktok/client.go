@@ -53,6 +53,13 @@ type Client struct {
 }
 
 // New returns a new TikTok Client.
+// New godoc
+// @Summary New
+// @Description Auto-generated thorough documentation for New
+// @Tags tiktok
+// @Produce json
+// @Success 200 {object} Client "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func New() *Client {
 	return &Client{httpClient: &http.Client{Timeout: 30 * time.Second}}
 }
@@ -66,6 +73,17 @@ var _ platform.Publisher = (*Client)(nil)
 
 // GeneratePKCE returns a random code_verifier and its S256 code_challenge.
 // TikTok's OAuth v2 requires PKCE on every authorization request.
+// GeneratePKCE godoc
+// @Summary GeneratePKCE
+// @Description Auto-generated thorough documentation for GeneratePKCE
+// @Tags tiktok
+// @Produce json
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func GeneratePKCE() (verifier, challenge string, err error) {
 	b := make([]byte, 32)
 	if _, err = rand.Read(b); err != nil {
@@ -82,6 +100,14 @@ func GeneratePKCE() (verifier, challenge string, err error) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // AuthorizationURL returns the consent URL. codeChallenge comes from GeneratePKCE.
+// AuthorizationURL godoc
+// @Summary AuthorizationURL
+// @Description Auto-generated thorough documentation for AuthorizationURL
+// @Tags tiktok
+// @Produce json
+// @Param codeChallenge body string true "codeChallenge"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func AuthorizationURL(state, codeChallenge string) string {
 	params := url.Values{}
 	params.Set("client_key", config.C.TikTokClientKey)
@@ -95,6 +121,18 @@ func AuthorizationURL(state, codeChallenge string) string {
 }
 
 // ExchangeCode exchanges an authorization code + PKCE verifier for an access token.
+// ExchangeCode godoc
+// @Summary ExchangeCode
+// @Description Auto-generated thorough documentation for ExchangeCode
+// @Tags tiktok
+// @Produce json
+// @Param codeVerifier body string true "codeVerifier"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) ExchangeCode(ctx context.Context, code, codeVerifier string) (*domain.PlatformConnection, error) {
 	form := url.Values{}
 	form.Set("client_key", config.C.TikTokClientKey)
@@ -147,6 +185,18 @@ func (c *Client) ExchangeCode(ctx context.Context, code, codeVerifier string) (*
 }
 
 // RefreshToken exchanges a refresh token for a new access token.
+// RefreshToken godoc
+// @Summary RefreshToken
+// @Description Auto-generated thorough documentation for RefreshToken
+// @Tags tiktok
+// @Produce json
+// @Param conn body object true "conn"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnection) (*domain.PlatformConnection, error) {
 	form := url.Values{}
 	form.Set("client_key", config.C.TikTokClientKey)
@@ -197,6 +247,19 @@ func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnecti
 // Publish posts a video to TikTok, pulling it from a public URL
 // (post.MediaURLs[0]). Requires at least one video URL — TikTok's Content
 // Posting API has no text-only or image-only post type.
+// Publish godoc
+// @Summary Publish
+// @Description Auto-generated thorough documentation for Publish
+// @Tags tiktok
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	if len(post.MediaURLs) == 0 {
 		return nil, fmt.Errorf("tiktok: requires a video URL — text-only/image-only posts are not supported by the API")
@@ -258,6 +321,19 @@ func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.Pl
 
 // FetchPublishStatus checks the processing status of a publish_id returned
 // by Publish. Not part of the Publisher interface — call directly to poll.
+// FetchPublishStatus godoc
+// @Summary FetchPublishStatus
+// @Description Auto-generated thorough documentation for FetchPublishStatus
+// @Tags tiktok
+// @Produce json
+// @Param conn body object true "conn"
+// @Param publishID body string true "publishID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) FetchPublishStatus(ctx context.Context, conn *domain.PlatformConnection, publishID string) (map[string]any, error) {
 	body, _ := json.Marshal(map[string]string{"publish_id": publishID})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, statusURL, bytes.NewReader(body))
@@ -285,6 +361,14 @@ func (c *Client) FetchPublishStatus(ctx context.Context, conn *domain.PlatformCo
 	return result, nil
 }
 
+// fetchDisplayName godoc
+// @Summary fetchDisplayName
+// @Description Auto-generated thorough documentation for fetchDisplayName
+// @Tags tiktok
+// @Produce json
+// @Param accessToken body string true "accessToken"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchDisplayName(ctx context.Context, accessToken string) string {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userInfoURL+"?fields=open_id,display_name", nil)
 	if err != nil {

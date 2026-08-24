@@ -13,6 +13,14 @@ import (
 // it, so ConnectPlatform/OAuthCallback (which read/write oauth_state keys)
 // can be tested without a real Redis instance. Call this once per test that
 // needs Redis; it's cleaned up automatically via t.Cleanup.
+// setupTestRedis godoc
+// @Summary setupTestRedis
+// @Description Auto-generated thorough documentation for setupTestRedis
+// @Tags workspace
+// @Produce json
+// @Param t body object true "t"
+// @Success 200 {object} miniredis.Miniredis "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func setupTestRedis(t *testing.T) *miniredis.Miniredis {
 	t.Helper()
 

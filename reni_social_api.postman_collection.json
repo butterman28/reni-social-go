@@ -1,1417 +1,3633 @@
 {
   "info": {
-    "name": "Reni Social API",
-    "description": "##  Quick Setup Pro-Tip (Do This First!)\n\nBefore testing any endpoints, click on the **Reni Social API** collection name in the left sidebar, go to the **Variables** tab, and set up these initial values so you don't have to type them manually every time:\n\n| Variable | Initial Value | Notes |\n| :--- | :--- | :--- |\n| `workspace_id` | `Your current workspace UUID |\n| `session_id` | *(your current redis session token)* | Get this from the `/api/auth/signin` response |\n| `token` | `dummy_token` | The middleware just checks for the word \"Bearer\" |\n| `attempt_id` | *(leave blank for now)* | Will be populated after triggering a publish |\n\n---\n\n# Reni Social API\n\n**Authentication:**\nProtected routes (under `/api/in`) require two headers:\n1. `Authorization: Bearer {{token}}` (Fiber middleware just checks for the word \"Bearer\")\n2. `X-Session-Id: {{session_id}}` (The actual session token from the `/api/auth/signin` response)\n\n**Workflows:**\nCheck the ** API Workflows \u0026 Guides** folder below for detailed frontend integration guides, including the Real-Time Async Publishing flow.",
+    "_postman_id": "reni-social-api-2026",
+    "name": "Reni Social API — Accurate Examples",
+    "description": "Generated from the supplied Reni Social Go codebase and its API_DOCUMENTATION.md. Examples reflect documented handler behavior, including mixed JSON casing and raw post-handler responses.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:1040"
+    },
+    {
+      "key": "token",
+      "value": "dummy_token"
+    },
+    {
+      "key": "session_id",
+      "value": ""
+    },
+    {
+      "key": "workspace_id",
+      "value": ""
+    },
+    {
+      "key": "post_id",
+      "value": ""
+    },
+    {
+      "key": "attempt_id",
+      "value": ""
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "connection_id",
+      "value": ""
+    },
+    {
+      "key": "tweet_id",
+      "value": "1234567890"
+    },
+    {
+      "key": "x_user_id",
+      "value": "987654321"
+    },
+    {
+      "key": "space_id",
+      "value": "1DXxy..."
+    },
+    {
+      "key": "list_id",
+      "value": "list-123"
+    },
+    {
+      "key": "oauth_state",
+      "value": ""
+    },
+    {
+      "key": "oauth_code",
+      "value": ""
+    },
+    {
+      "key": "oauth_token",
+      "value": ""
+    },
+    {
+      "key": "oauth_verifier",
+      "value": ""
+    }
+  ],
   "item": [
     {
-      "name": " API Workflows \u0026 Guides",
-      "description": "Documentation for complex multi-step workflows in the Reni Social API.",
+      "name": "01 Auth & Onboarding",
       "item": [
         {
-          "name": "Real-Time Publishing Flow (Frontend Guide)",
+          "name": "POST /api/auth/register/email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/email",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "email"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mail\": \"user@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Step 1: sends an email verification code through Reni Central."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register/email",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "email"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mail\": \"user@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Step 1: sends an email verification code through Reni Central."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"string from Reni Central\",\n  \"data\": {},\n  \"http_status\": 200\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/register/email/activate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/email/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "email",
+                "activate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mail\": \"user@example.com\",\n  \"authCode\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Step 2: verifies the emailed code."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register/email/activate",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "email",
+                    "activate"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mail\": \"user@example.com\",\n  \"authCode\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Step 2: verifies the emailed code."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"string from Reni Central\",\n  \"data\": {},\n  \"http_status\": 200\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/register/complete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/register/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                "complete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mail\": \"user@example.com\",\n  \"fname\": \"John\",\n  \"lname\": \"Doe\",\n  \"phone\": \"1234567890\",\n  \"pword\": \"Password123!\",\n  \"cpword\": \"Password123!\",\n  \"username\": \"johndoe99\",\n  \"gender\": \"male\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Step 3: completes registration. On success data.token is replaced with the local Redis session id."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/register/complete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "register",
+                    "complete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mail\": \"user@example.com\",\n  \"fname\": \"John\",\n  \"lname\": \"Doe\",\n  \"phone\": \"1234567890\",\n  \"pword\": \"Password123!\",\n  \"cpword\": \"Password123!\",\n  \"username\": \"johndoe99\",\n  \"gender\": \"male\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Step 3: completes registration. On success data.token is replaced with the local Redis session id."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"string\",\n  \"data\": {\n    \"fname\": \"John\",\n    \"lname\": \"Doe\",\n    \"phone\": \"1234567890\",\n    \"gender\": \"male\",\n    \"mail\": \"user@example.com\",\n    \"pword\": \"Password123!\",\n    \"username\": \"johndoe99\",\n    \"fullname\": \"John Doe\",\n    \"token\": \"<local-session-token>\"\n  },\n  \"http_status\": 200\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/signin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/signin",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "signin"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mail\": \"user@example.com\",\n  \"pword\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Signs in through Reni Central, upserts the local user and creates a local Redis session. Save data.token as X-Session-Id."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/auth/signin",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "signin"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"mail\": \"user@example.com\",\n  \"pword\": \"Password123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Signs in through Reni Central, upserts the local user and creates a local Redis session. Save data.token as X-Session-Id."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"string\",\n  \"data\": {\n    \"id\": 123,\n    \"token\": \"<local-session-token>\",\n    \"mail\": \"user@example.com\",\n    \"username\": \"johndoe99\",\n    \"fullname\": \"John Doe\",\n    \"fname\": \"John\",\n    \"lname\": \"Doe\",\n    \"phone\": \"1234567890\",\n    \"gender\": \"male\",\n    \"verified\": 1,\n    \"picture\": \"https://example.com/avatar.jpg\"\n  },\n  \"http_status\": 200\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.status === true && jsonData.data && jsonData.data.token) {",
+                  "  pm.collectionVariables.set('session_id', jsonData.data.token);",
+                  "  pm.collectionVariables.set('token', 'dummy_token');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/auth/signout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/auth/signout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "auth",
+                "signout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "\"\"",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Deletes the session associated with the bearer token."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/auth/signout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "auth",
+                    "signout"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "\"\"",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Deletes the session associated with the bearer token."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"Signed out successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/auth/me",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
             "url": {
-              "raw": "http://127.0.0.1:1040/health",
+              "raw": "{{base_url}}/api/in/auth/me",
               "host": [
-                "http://127.0.0.1:1040"
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Returns the local user. The handler only selects id, email, first_name, last_name, avatar_url and created_at; other fields are zero values."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "auth",
+                    "me"
+                  ]
+                },
+                "description": "Returns the local user. The handler only selects id, email, first_name, last_name, avatar_url and created_at; other fields are zero values."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"id\": \"b3f1...-uuid\",\n    \"email\": \"user@example.com\",\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"fullname\": \"\",\n    \"phone_number\": \"\",\n    \"username\": \"\",\n    \"gender\": \"\",\n    \"address\": \"\",\n    \"avatar_url\": \"\",\n    \"token\": \"\",\n    \"is_email_verified\": false,\n    \"created_at\": \"2026-01-01T00:00:00Z\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Workspaces & Members",
+      "item": [
+        {
+          "name": "POST /api/in/workspaces",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My New Workspace\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Creates a workspace; caller becomes owner."
+          },
+          "response": [
+            {
+              "name": "201 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"My New Workspace\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Creates a workspace; caller becomes owner."
+              },
+              "status": "OK",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"Workspace created\",\n  \"data\": {\n    \"ID\": \"8b2e...-uuid\",\n    \"OwnerID\": \"b3f1...-uuid\",\n    \"Name\": \"My New Workspace\",\n    \"Slug\": \"my-new-workspace-8b2e6a1c\",\n    \"CreatedAt\": \"2026-08-07T10:00:00Z\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.status === true && jsonData.data && jsonData.data.ID) pm.collectionVariables.set('workspace_id', jsonData.data.ID);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"ID\": \"8b2e...-uuid\",\n      \"OwnerID\": \"b3f1...-uuid\",\n      \"Name\": \"Acme Inc\",\n      \"Slug\": \"acme-inc-12345678\",\n      \"CreatedAt\": \"2026-08-07T10:00:00Z\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"ID\": \"8b2e...-uuid\",\n    \"OwnerID\": \"b3f1...-uuid\",\n    \"Name\": \"Acme Inc\",\n    \"Slug\": \"acme-inc-12345678\",\n    \"CreatedAt\": \"2026-08-07T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/slug/acme-inc-12345678",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/slug/acme-inc-12345678",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "slug",
+                "acme-inc-12345678"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/slug/acme-inc-12345678",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "slug",
+                    "acme-inc-12345678"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"ID\": \"8b2e...-uuid\",\n    \"OwnerID\": \"b3f1...-uuid\",\n    \"Name\": \"Acme Inc\",\n    \"Slug\": \"acme-inc-12345678\",\n    \"CreatedAt\": \"2026-08-07T10:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/workspaces/in/{{workspace_id}}/members",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "members"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Caller must be admin/owner. Valid request roles are empty/member/admin/owner, but owner is downgraded to member by the service."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/members",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "members"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"teammate@example.com\",\n  \"role\": \"admin\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Caller must be admin/owner. Valid request roles are empty/member/admin/owner, but owner is downgraded to member by the service."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"Member invited\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "members"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/members",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "members"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": \"b3f1...-uuid\",\n      \"email\": \"owner@example.com\",\n      \"first_name\": \"Ada\",\n      \"last_name\": \"Lovelace\",\n      \"avatar_url\": \"\",\n      \"role\": \"owner\",\n      \"joined_at\": \"2026-01-01T00:00:00Z\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/in/workspaces/in/{{workspace_id}}/members/in/{{user_id}}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/members/in/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "members",
+                "in",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Owner cannot be removed."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/members/in/{{user_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "members",
+                    "in",
+                    "{{user_id}}"
+                  ]
+                },
+                "description": "Owner cannot be removed."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"Member removed\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Platform Connections",
+      "item": [
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/connections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connections",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "connections"
+              ]
+            },
+            "description": "Lists LinkedIn + Meta + X connections. Note: the current handler serializes PlatformConnection directly, so AccessToken and RefreshToken are exposed in this response."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connections",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "connections"
+                  ]
+                },
+                "description": "Lists LinkedIn + Meta + X connections. Note: the current handler serializes PlatformConnection directly, so AccessToken and RefreshToken are exposed in this response."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"ID\": \"conn-uuid\",\n      \"WorkspaceID\": \"8b2e...-uuid\",\n      \"Platform\": \"linkedin\",\n      \"AccountID\": \"urn:li:person:12345\",\n      \"AccountName\": \"Ada Lovelace\",\n      \"AccessToken\": \"<access-token>\",\n      \"RefreshToken\": \"\",\n      \"ExpiresAt\": \"2026-10-01T00:00:00Z\",\n      \"CreatedAt\": \"2026-08-01T00:00:00Z\",\n      \"IsDeleted\": false\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/workspaces/in/{{workspace_id}}/connect/in/linkedin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connect/in/linkedin",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "connect",
+                "in",
+                "linkedin"
+              ]
+            },
+            "description": "Starts LinkedIn OAuth. If an active connection already exists, returns already_connected=true."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connect/in/linkedin",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "connect",
+                    "in",
+                    "linkedin"
+                  ]
+                },
+                "description": "Starts LinkedIn OAuth. If an active connection already exists, returns already_connected=true."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"redirect_url\": \"https://www.linkedin.com/oauth/v2/authorization?...\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/workspaces/in/{{workspace_id}}/connect/in/meta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connect/in/meta",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "connect",
+                "in",
+                "meta"
+              ]
+            },
+            "description": "Starts Instagram Login OAuth through Meta."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connect/in/meta",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "connect",
+                    "in",
+                    "meta"
+                  ]
+                },
+                "description": "Starts Instagram Login OAuth through Meta."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"redirect_url\": \"https://www.instagram.com/oauth/authorize?...\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/workspaces/in/{{workspace_id}}/connect/in/x",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connect/in/x",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "connect",
+                "in",
+                "x"
+              ]
+            },
+            "description": "Starts X OAuth 1.0a and returns a ready-to-open authorization URL."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connect/in/x",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "connect",
+                    "in",
+                    "x"
+                  ]
+                },
+                "description": "Starts X OAuth 1.0a and returns a ready-to-open authorization URL."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"redirect_url\": \"https://api.twitter.com/oauth/authorize?oauth_token=<request-token>\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/workspaces/connect/linkedin/callback",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/workspaces/connect/linkedin/callback?state={{oauth_state}}&code={{oauth_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "connect",
+                "linkedin",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "{{oauth_state}}",
+                  "description": "OAuth state returned by connect"
+                },
+                {
+                  "key": "code",
+                  "value": "{{oauth_code}}",
+                  "description": "Provider authorization code"
+                }
+              ]
+            },
+            "description": "Browser callback. Provide state and code as query parameters. The endpoint redirects the browser; it does not return JSON."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/workspaces/connect/linkedin/callback?state={{oauth_state}}&code={{oauth_code}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "workspaces",
+                    "connect",
+                    "linkedin",
+                    "callback"
+                  ],
+                  "query": [
+                    {
+                      "key": "state",
+                      "value": "{{oauth_state}}",
+                      "description": "OAuth state returned by connect"
+                    },
+                    {
+                      "key": "code",
+                      "value": "{{oauth_code}}",
+                      "description": "Provider authorization code"
+                    }
+                  ]
+                },
+                "description": "Browser callback. Provide state and code as query parameters. The endpoint redirects the browser; it does not return JSON."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"redirect\": \"http://localhost:5173/acme-inc-12345678/settings?tab=accounts&connected=linkedin\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/workspaces/connect/meta/callback",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/workspaces/connect/meta/callback?state={{oauth_state}}&code={{oauth_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "connect",
+                "meta",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "state",
+                  "value": "{{oauth_state}}",
+                  "description": "OAuth state returned by connect"
+                },
+                {
+                  "key": "code",
+                  "value": "{{oauth_code}}",
+                  "description": "Provider authorization code"
+                }
+              ]
+            },
+            "description": "Browser callback for Instagram Login via Meta. Redirects; no JSON response."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/workspaces/connect/meta/callback?state={{oauth_state}}&code={{oauth_code}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "workspaces",
+                    "connect",
+                    "meta",
+                    "callback"
+                  ],
+                  "query": [
+                    {
+                      "key": "state",
+                      "value": "{{oauth_state}}",
+                      "description": "OAuth state returned by connect"
+                    },
+                    {
+                      "key": "code",
+                      "value": "{{oauth_code}}",
+                      "description": "Provider authorization code"
+                    }
+                  ]
+                },
+                "description": "Browser callback for Instagram Login via Meta. Redirects; no JSON response."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"redirect\": \"http://localhost:5173/acme-inc-12345678/settings?tab=accounts&connected=meta\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/workspaces/connect/x/callback",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/workspaces/connect/x/callback?oauth_token={{oauth_token}}&oauth_verifier={{oauth_verifier}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "connect",
+                "x",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "oauth_token",
+                  "value": "{{oauth_token}}",
+                  "description": "X OAuth token"
+                },
+                {
+                  "key": "oauth_verifier",
+                  "value": "{{oauth_verifier}}",
+                  "description": "X OAuth verifier"
+                }
+              ]
+            },
+            "description": "Browser callback for X OAuth 1.0a. Redirects; no JSON response."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/workspaces/connect/x/callback?oauth_token={{oauth_token}}&oauth_verifier={{oauth_verifier}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "workspaces",
+                    "connect",
+                    "x",
+                    "callback"
+                  ],
+                  "query": [
+                    {
+                      "key": "oauth_token",
+                      "value": "{{oauth_token}}",
+                      "description": "X OAuth token"
+                    },
+                    {
+                      "key": "oauth_verifier",
+                      "value": "{{oauth_verifier}}",
+                      "description": "X OAuth verifier"
+                    }
+                  ]
+                },
+                "description": "Browser callback for X OAuth 1.0a. Redirects; no JSON response."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"redirect\": \"http://localhost:5173/acme-inc-12345678/settings?tab=accounts&connected=x\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/in/workspaces/in/{{workspace_id}}/connections/{{connection_id}}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connections/{{connection_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "connections",
+                "{{connection_id}}"
+              ]
+            },
+            "description": "Soft-deletes the connection."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/connections/{{connection_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "connections",
+                    "{{connection_id}}"
+                  ]
+                },
+                "description": "Soft-deletes the connection."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"Platform disconnected\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Posts & Publishing",
+      "item": [
+        {
+          "name": "POST /api/in/posts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workspace_id\": \"{{workspace_id}}\",\n  \"content\": \"Hello world from Reni Social! 🚀\",\n  \"media_urls\": [],\n  \"platforms\": [\n    \"linkedin\",\n    \"x\"\n  ],\n  \"article_url\": \"\",\n  \"article_title\": \"\",\n  \"scheduled_at\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Creates a draft or scheduled post. Platforms: linkedin, meta_ig, meta_fb, x, tiktok. scheduled_at=null creates a draft; a future ISO-8601 value creates scheduled status. article_url is rejected with meta_ig/tiktok."
+          },
+          "response": [
+            {
+              "name": "201 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"workspace_id\": \"{{workspace_id}}\",\n  \"content\": \"Hello world from Reni Social! 🚀\",\n  \"media_urls\": [],\n  \"platforms\": [\n    \"linkedin\",\n    \"x\"\n  ],\n  \"article_url\": \"\",\n  \"article_title\": \"\",\n  \"scheduled_at\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Creates a draft or scheduled post. Platforms: linkedin, meta_ig, meta_fb, x, tiktok. scheduled_at=null creates a draft; a future ISO-8601 value creates scheduled status. article_url is rejected with meta_ig/tiktok."
+              },
+              "status": "OK",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"post\": {\n    \"ID\": \"post-uuid\",\n    \"WorkspaceID\": \"8b2e...-uuid\",\n    \"AuthorID\": \"b3f1...-uuid\",\n    \"Content\": \"Hello world from Reni Social! 🚀\",\n    \"MediaURLs\": [],\n    \"Platforms\": [\n      \"linkedin\",\n      \"x\"\n    ],\n    \"ArticleURL\": \"\",\n    \"ArticleTitle\": \"\",\n    \"Status\": \"draft\",\n    \"ScheduledAt\": null,\n    \"PublishedAt\": null,\n    \"FailReason\": \"\",\n    \"CreatedAt\": \"2026-08-07T10:00:00Z\",\n    \"UpdatedAt\": \"2026-08-07T10:00:00Z\",\n    \"CurrentPublishAttemptID\": null,\n    \"retry_count\": 0,\n    \"max_retries\": 0\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/posts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts?workspace_id={{workspace_id}}&status=draft&page=0&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}",
+                  "description": "Required workspace UUID"
+                },
+                {
+                  "key": "status",
+                  "value": "draft",
+                  "description": "Optional: draft, scheduled, publishing, published, failed"
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max 100"
+                }
+              ]
+            },
+            "description": "Lists posts. workspace_id is required; status is optional; page defaults 0; limit defaults 20 and is capped at 100."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts?workspace_id={{workspace_id}}&status=draft&page=0&limit=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts"
+                  ],
+                  "query": [
+                    {
+                      "key": "workspace_id",
+                      "value": "{{workspace_id}}",
+                      "description": "Required workspace UUID"
+                    },
+                    {
+                      "key": "status",
+                      "value": "draft",
+                      "description": "Optional: draft, scheduled, publishing, published, failed"
+                    },
+                    {
+                      "key": "page",
+                      "value": "0",
+                      "description": "Page number"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Max 100"
+                    }
+                  ]
+                },
+                "description": "Lists posts. workspace_id is required; status is optional; page defaults 0; limit defaults 20 and is capped at 100."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"posts\": [\n    {\n      \"ID\": \"post-uuid\",\n      \"WorkspaceID\": \"8b2e...-uuid\",\n      \"AuthorID\": \"b3f1...-uuid\",\n      \"Content\": \"Hello world from Reni Social! 🚀\",\n      \"MediaURLs\": [],\n      \"Platforms\": [\n        \"linkedin\",\n        \"x\"\n      ],\n      \"ArticleURL\": \"\",\n      \"ArticleTitle\": \"\",\n      \"Status\": \"draft\",\n      \"ScheduledAt\": null,\n      \"PublishedAt\": null,\n      \"FailReason\": \"\",\n      \"CreatedAt\": \"2026-08-07T10:00:00Z\",\n      \"UpdatedAt\": \"2026-08-07T10:00:00Z\",\n      \"CurrentPublishAttemptID\": null,\n      \"retry_count\": 0,\n      \"max_retries\": 0\n    }\n  ],\n  \"page\": 0,\n  \"limit\": 20\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/posts/in/{{post_id}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts/in/{{post_id}}?workspace_id={{workspace_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts",
+                "in",
+                "{{post_id}}"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}",
+                  "description": "Required workspace UUID"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts/in/{{post_id}}?workspace_id={{workspace_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts",
+                    "in",
+                    "{{post_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "workspace_id",
+                      "value": "{{workspace_id}}",
+                      "description": "Required workspace UUID"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"post\": {\n    \"ID\": \"post-uuid\",\n    \"WorkspaceID\": \"8b2e...-uuid\",\n    \"AuthorID\": \"b3f1...-uuid\",\n    \"Content\": \"Hello world from Reni Social! 🚀\",\n    \"MediaURLs\": [],\n    \"Platforms\": [\n      \"linkedin\",\n      \"x\"\n    ],\n    \"ArticleURL\": \"\",\n    \"ArticleTitle\": \"\",\n    \"Status\": \"draft\",\n    \"ScheduledAt\": null,\n    \"PublishedAt\": null,\n    \"FailReason\": \"\",\n    \"CreatedAt\": \"2026-08-07T10:00:00Z\",\n    \"UpdatedAt\": \"2026-08-07T10:00:00Z\",\n    \"CurrentPublishAttemptID\": null,\n    \"retry_count\": 0,\n    \"max_retries\": 0\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "PUT /api/in/posts/in/{{post_id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts/in/{{post_id}}?workspace_id={{workspace_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts",
+                "in",
+                "{{post_id}}"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}",
+                  "description": "Required workspace UUID"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated post content!\",\n  \"media_urls\": [],\n  \"platforms\": [\n    \"linkedin\"\n  ],\n  \"article_url\": null,\n  \"article_title\": null,\n  \"scheduled_at\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Partial update. Only draft/scheduled posts can be edited. Supplying scheduled_at changes status to scheduled."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts/in/{{post_id}}?workspace_id={{workspace_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts",
+                    "in",
+                    "{{post_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "workspace_id",
+                      "value": "{{workspace_id}}",
+                      "description": "Required workspace UUID"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Updated post content!\",\n  \"media_urls\": [],\n  \"platforms\": [\n    \"linkedin\"\n  ],\n  \"article_url\": null,\n  \"article_title\": null,\n  \"scheduled_at\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Partial update. Only draft/scheduled posts can be edited. Supplying scheduled_at changes status to scheduled."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"post\": {\n    \"ID\": \"post-uuid\",\n    \"WorkspaceID\": \"8b2e...-uuid\",\n    \"AuthorID\": \"b3f1...-uuid\",\n    \"Content\": \"Updated post content!\",\n    \"MediaURLs\": [],\n    \"Platforms\": [\n      \"linkedin\"\n    ],\n    \"ArticleURL\": \"\",\n    \"ArticleTitle\": \"\",\n    \"Status\": \"draft\",\n    \"ScheduledAt\": null,\n    \"PublishedAt\": null,\n    \"FailReason\": \"\",\n    \"CreatedAt\": \"2026-08-07T10:00:00Z\",\n    \"UpdatedAt\": \"2026-08-07T10:00:00Z\",\n    \"CurrentPublishAttemptID\": null,\n    \"retry_count\": 0,\n    \"max_retries\": 0\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/in/posts/in/{{post_id}}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts/in/{{post_id}}?workspace_id={{workspace_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts",
+                "in",
+                "{{post_id}}"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}",
+                  "description": "Required workspace UUID"
+                }
+              ]
+            },
+            "description": "Deletes a post unless its current status is publishing or published."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts/in/{{post_id}}?workspace_id={{workspace_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts",
+                    "in",
+                    "{{post_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "workspace_id",
+                      "value": "{{workspace_id}}",
+                      "description": "Required workspace UUID"
+                    }
+                  ]
+                },
+                "description": "Deletes a post unless its current status is publishing or published."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"post deleted\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/posts/in/{{post_id}}/publish",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts/in/{{post_id}}/publish?workspace_id={{workspace_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts",
+                "in",
+                "{{post_id}}",
+                "publish"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}",
+                  "description": "Required workspace UUID"
+                }
+              ]
+            },
+            "description": "Asynchronous publish trigger. Returns immediately with an attempt_id."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts/in/{{post_id}}/publish?workspace_id={{workspace_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts",
+                    "in",
+                    "{{post_id}}",
+                    "publish"
+                  ],
+                  "query": [
+                    {
+                      "key": "workspace_id",
+                      "value": "{{workspace_id}}",
+                      "description": "Required workspace UUID"
+                    }
+                  ]
+                },
+                "description": "Asynchronous publish trigger. Returns immediately with an attempt_id."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"publishing_initiated\",\n  \"attempt_id\": \"8f4e2d1c-9b3a-4e5f-8c7d-6e5f4a3b2c1d\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonData = pm.response.json();",
+                  "if (jsonData.attempt_id) pm.collectionVariables.set('attempt_id', jsonData.attempt_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/in/posts/in/{{post_id}}/schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/posts/in/{{post_id}}/schedule?workspace_id={{workspace_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "posts",
+                "in",
+                "{{post_id}}",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspace_id}}",
+                  "description": "Required workspace UUID"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduled_at\": \"2026-12-31T23:59:59Z\",\n  \"platforms\": [\n    \"linkedin\",\n    \"meta_ig\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Schedules a draft/scheduled post. The platforms field is parsed but not applied; platforms already stored on the post remain unchanged."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/posts/in/{{post_id}}/schedule?workspace_id={{workspace_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "posts",
+                    "in",
+                    "{{post_id}}",
+                    "schedule"
+                  ],
+                  "query": [
+                    {
+                      "key": "workspace_id",
+                      "value": "{{workspace_id}}",
+                      "description": "Required workspace UUID"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"scheduled_at\": \"2026-12-31T23:59:59Z\",\n  \"platforms\": [\n    \"linkedin\",\n    \"meta_ig\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Schedules a draft/scheduled post. The platforms field is parsed but not applied; platforms already stored on the post remain unchanged."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"post scheduled\",\n  \"scheduled_at\": \"2026-12-31T23:59:59Z\"\n}"
+            }
+          ]
+        },
+        {
+    "name": "GET /api/in/posts/in/{{post_id}}/results",
+    "request": {
+        "method": "GET",
+        "header": [
+            {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+            },
+            {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+            },
+            {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+            }
+        ],
+        "url": {
+            "raw": "{{base_url}}/api/in/posts/in/{{post_id}}/results?attempt_id={{attempt_id}}&workspace_id={{workspace_id}}",
+            "host": [
+                "{{base_url}}"
+            ],
+            "path": [
+                "api",
+                "in",
+                "posts",
+                "in",
+                "{{post_id}}",
+                "results"
+            ],
+            "query": [
+                {
+                    "key": "attempt_id",
+                    "value": "{{attempt_id}}",
+                    "description": "Recommended: attempt returned by /publish"
+                },
+                {
+                    "key": "workspace_id",
+                    "value": "{{workspace_id}}",
+                    "description": "Required workspace UUID for tenant authorization"
+                }
+            ]
+        },
+        "description": "Poll per-platform publishing status. Recommended: include attempt_id and poll about every 2 seconds. Statuses: pending, processing, published, failed."
+    },
+    "response": [
+        {
+            "name": "200 Example",
+            "originalRequest": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}",
+                        "type": "text"
+                    },
+                    {
+                        "key": "X-Session-Id",
+                        "value": "{{session_id}}",
+                        "type": "text"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/in/posts/in/{{post_id}}/results?attempt_id={{attempt_id}}&workspace_id={{workspace_id}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "in",
+                        "posts",
+                        "in",
+                        "{{post_id}}",
+                        "results"
+                    ],
+                    "query": [
+                        {
+                            "key": "attempt_id",
+                            "value": "{{attempt_id}}",
+                            "description": "Recommended: attempt returned by /publish"
+                        },
+                        {
+                            "key": "workspace_id",
+                            "value": "{{workspace_id}}",
+                            "description": "Required workspace UUID for tenant authorization"
+                        }
+                    ]
+                },
+                "description": "Poll per-platform publishing status. Recommended: include attempt_id and poll about every 2 seconds. Statuses: pending, processing, published, failed."
+            },
+            "status": "OK",
+            "code": 200,
+            "_postman_previewlanguage": "json",
+            "header": [
+                {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                }
+            ],
+            "body": "{\n  \"results\": [\n    {\n      \"id\": \"a1b2c3d4-...\",\n      \"platform\": \"linkedin\",\n      \"status\": \"published\",\n      \"platform_post_id\": \"urn:li:share:7123456789\",\n      \"platform_post_url\": \"https://www.linkedin.com/feed/update/urn:li:share:7123456789\",\n      \"container_id\": \"\",\n      \"fail_reason\": \"\",\n      \"created_at\": \"2026-08-08T10:00:00Z\",\n      \"updated_at\": \"2026-08-08T10:00:05Z\"\n    },\n    {\n      \"id\": \"b2c3d4e5-...\",\n      \"platform\": \"meta_ig\",\n      \"status\": \"processing\",\n      \"platform_post_id\": \"\",\n      \"platform_post_url\": \"\",\n      \"container_id\": \"17954998877665544\",\n      \"fail_reason\": \"\",\n      \"created_at\": \"2026-08-08T10:00:00Z\",\n      \"updated_at\": \"2026-08-08T10:00:00Z\"\n    },\n    {\n      \"id\": \"c3d4e5f6-...\",\n      \"platform\": \"x\",\n      \"status\": \"failed\",\n      \"platform_post_id\": \"\",\n      \"platform_post_url\": \"\",\n      \"container_id\": \"\",\n      \"fail_reason\": \"x: tweet failed (403): Forbidden\",\n      \"created_at\": \"2026-08-08T10:00:00Z\",\n      \"updated_at\": \"2026-08-08T10:00:02Z\"\n    }\n  ]\n}"
+        }
+    ]
+}
+      ]
+    },
+    {
+      "name": "05 X Read API",
+      "item": [
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/x/connections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/connections",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "x",
+                "connections"
+              ]
+            },
+            "description": "Lists X connections for the workspace. Safe subset; no tokens."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/connections",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "x",
+                    "connections"
+                  ]
+                },
+                "description": "Lists X connections for the workspace. Safe subset; no tokens."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": [\n    {\n      \"id\": \"conn-uuid\",\n      \"account_id\": \"12345\",\n      \"account_name\": \"myhandle\",\n      \"expires_at\": null,\n      \"created_at\": \"2026-08-01T00:00:00Z\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/x/tweets/in/{{tweet_id}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/tweets/in/{{tweet_id}}?connection_id={{connection_id}}&tweet.fields=created_at,public_metrics&expansions=author_id",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "x",
+                "tweets",
+                "in",
+                "{{tweet_id}}"
+              ],
+              "query": [
+                {
+                  "key": "connection_id",
+                  "value": "{{connection_id}}",
+                  "description": "Optional X connection UUID"
+                },
+                {
+                  "key": "tweet.fields",
+                  "value": "created_at,public_metrics",
+                  "description": "Optional X fields"
+                },
+                {
+                  "key": "expansions",
+                  "value": "author_id",
+                  "description": "Optional X expansions"
+                }
+              ]
+            },
+            "description": "Passes supported X API query parameters through as tweet.fields/expansions/etc. connection_id is optional."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/tweets/in/{{tweet_id}}?connection_id={{connection_id}}&tweet.fields=created_at,public_metrics&expansions=author_id",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "x",
+                    "tweets",
+                    "in",
+                    "{{tweet_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "connection_id",
+                      "value": "{{connection_id}}",
+                      "description": "Optional X connection UUID"
+                    },
+                    {
+                      "key": "tweet.fields",
+                      "value": "created_at,public_metrics",
+                      "description": "Optional X fields"
+                    },
+                    {
+                      "key": "expansions",
+                      "value": "author_id",
+                      "description": "Optional X expansions"
+                    }
+                  ]
+                },
+                "description": "Passes supported X API query parameters through as tweet.fields/expansions/etc. connection_id is optional."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"data\": {\n      \"id\": \"1234567890\",\n      \"text\": \"Hello from X\",\n      \"author_id\": \"987654321\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/x/tweets/in/{{tweet_id}}/full",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/tweets/in/{{tweet_id}}/full?connection_id={{connection_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "x",
+                "tweets",
+                "in",
+                "{{tweet_id}}",
+                "full"
+              ],
+              "query": [
+                {
+                  "key": "connection_id",
+                  "value": "{{connection_id}}",
+                  "description": "Optional X connection UUID"
+                }
+              ]
+            },
+            "description": "Fixed rich-expansion tweet variant; automatically sets media/poll/place/user fields."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/tweets/in/{{tweet_id}}/full?connection_id={{connection_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "x",
+                    "tweets",
+                    "in",
+                    "{{tweet_id}}",
+                    "full"
+                  ],
+                  "query": [
+                    {
+                      "key": "connection_id",
+                      "value": "{{connection_id}}",
+                      "description": "Optional X connection UUID"
+                    }
+                  ]
+                },
+                "description": "Fixed rich-expansion tweet variant; automatically sets media/poll/place/user fields."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"data\": {\n      \"id\": \"1234567890\",\n      \"text\": \"Hello from X\",\n      \"author_id\": \"987654321\"\n    },\n    \"includes\": {\n      \"users\": [\n        {\n          \"id\": \"987654321\",\n          \"name\": \"Example User\",\n          \"username\": \"example\"\n        }\n      ],\n      \"media\": []\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/x/users/in/{{user_id}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/users/in/{{user_id}}?connection_id={{connection_id}}&user.fields=description,profile_image_url,public_metrics,created_at",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "x",
+                "users",
+                "in",
+                "{{user_id}}"
+              ],
+              "query": [
+                {
+                  "key": "connection_id",
+                  "value": "{{connection_id}}",
+                  "description": "Optional X connection UUID"
+                },
+                {
+                  "key": "user.fields",
+                  "value": "description,profile_image_url,public_metrics,created_at",
+                  "description": "Optional override"
+                }
+              ]
+            },
+            "description": "Gets an X user. Defaults user.fields=description,profile_image_url,public_metrics,created_at."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/users/in/{{user_id}}?connection_id={{connection_id}}&user.fields=description,profile_image_url,public_metrics,created_at",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "x",
+                    "users",
+                    "in",
+                    "{{user_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "connection_id",
+                      "value": "{{connection_id}}",
+                      "description": "Optional X connection UUID"
+                    },
+                    {
+                      "key": "user.fields",
+                      "value": "description,profile_image_url,public_metrics,created_at",
+                      "description": "Optional override"
+                    }
+                  ]
+                },
+                "description": "Gets an X user. Defaults user.fields=description,profile_image_url,public_metrics,created_at."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"data\": {\n      \"id\": \"987654321\",\n      \"name\": \"Example User\",\n      \"username\": \"example\",\n      \"description\": \"Example profile\",\n      \"profile_image_url\": \"https://example.com/avatar.jpg\",\n      \"public_metrics\": {\n        \"followers_count\": 10\n      },\n      \"created_at\": \"2026-01-01T00:00:00Z\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/x/spaces/in/{{space_id}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/spaces/in/{{space_id}}?connection_id={{connection_id}}&space.fields=title,state,created_at,lang",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "x",
+                "spaces",
+                "in",
+                "{{space_id}}"
+              ],
+              "query": [
+                {
+                  "key": "connection_id",
+                  "value": "{{connection_id}}",
+                  "description": "Optional X connection UUID"
+                },
+                {
+                  "key": "space.fields",
+                  "value": "title,state,created_at,lang",
+                  "description": "Optional override"
+                }
+              ]
+            },
+            "description": "Gets an X Space. Defaults space.fields=title,state,created_at,lang."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/spaces/in/{{space_id}}?connection_id={{connection_id}}&space.fields=title,state,created_at,lang",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "x",
+                    "spaces",
+                    "in",
+                    "{{space_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "connection_id",
+                      "value": "{{connection_id}}",
+                      "description": "Optional X connection UUID"
+                    },
+                    {
+                      "key": "space.fields",
+                      "value": "title,state,created_at,lang",
+                      "description": "Optional override"
+                    }
+                  ]
+                },
+                "description": "Gets an X Space. Defaults space.fields=title,state,created_at,lang."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"data\": {\n      \"id\": \"1DXxy...\",\n      \"title\": \"Example Space\",\n      \"state\": \"live\",\n      \"created_at\": \"2026-08-01T10:00:00Z\",\n      \"lang\": \"en\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "GET /api/in/workspaces/in/{{workspace_id}}/x/lists/in/{{list_id}}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}",
+                "type": "text"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{session_id}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/lists/in/{{list_id}}?connection_id={{connection_id}}&list.fields=name,description,member_count,follower_count",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "workspaces",
+                "in",
+                "{{workspace_id}}",
+                "x",
+                "lists",
+                "in",
+                "{{list_id}}"
+              ],
+              "query": [
+                {
+                  "key": "connection_id",
+                  "value": "{{connection_id}}",
+                  "description": "Optional X connection UUID"
+                },
+                {
+                  "key": "list.fields",
+                  "value": "name,description,member_count,follower_count",
+                  "description": "Optional override"
+                }
+              ]
+            },
+            "description": "Gets an X List. Defaults list.fields=name,description,member_count,follower_count."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-Session-Id",
+                    "value": "{{session_id}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/in/workspaces/in/{{workspace_id}}/x/lists/in/{{list_id}}?connection_id={{connection_id}}&list.fields=name,description,member_count,follower_count",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "in",
+                    "workspaces",
+                    "in",
+                    "{{workspace_id}}",
+                    "x",
+                    "lists",
+                    "in",
+                    "{{list_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "connection_id",
+                      "value": "{{connection_id}}",
+                      "description": "Optional X connection UUID"
+                    },
+                    {
+                      "key": "list.fields",
+                      "value": "name,description,member_count,follower_count",
+                      "description": "Optional override"
+                    }
+                  ]
+                },
+                "description": "Gets an X List. Defaults list.fields=name,description,member_count,follower_count."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": true,\n  \"message\": \"OK\",\n  \"data\": {\n    \"data\": {\n      \"id\": \"list-123\",\n      \"name\": \"Example List\",\n      \"description\": \"Example list\",\n      \"member_count\": 25,\n      \"follower_count\": 5\n    }\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 System",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
               ],
               "path": [
                 "health"
               ]
             },
-            "description": "#  Real-Time Publishing Workflow\n\nWhen a user clicks \"Publish\", the backend processes platforms asynchronously (especially Instagram/TikTok videos, which can take 10–30 seconds to process on Meta's servers). Instead of blocking the UI with a long loading spinner, we use an **Idempotency Key + Smart Polling** approach.\n\n## The 3-Step Flow\n\n###  Trigger the Publish\n**Endpoint:** `POST /api/in/posts/in/:id/publish?workspace_id=:workspace_id`\n\nInstead of returning \"post published\", the API now immediately returns a tracking ID.\n\n**Response:**\n```json\n{\n    \"message\": \"publishing_initiated\",\n    \"attempt_id\": \"8f4e2d1c-9b3a-4e5f-8c7d-6e5f4a3b2c1d\"\n}\n```\n**Action:** Save the `attempt_id` in your component state. This is your \"receipt\" for this specific button click.\n\n---\n\n###  Poll for Real-Time Status\n**Endpoint:** `GET /api/in/posts/in/:id/results?attempt_id=:attempt_id`\n\n**Action:** Start a `setInterval` (every 2 seconds) calling this endpoint using the `attempt_id` from Step 1. Because we pass the `attempt_id`, the API will ignore any old failed attempts and only return the status of the *current* publish job.\n\n**Response:**\n```json\n{\n    \"results\": [\n        {\n            \"platform\": \"linkedin\",\n            \"status\": \"published\",\n            \"platform_post_id\": \"urn:li:share:7123...\",\n            \"fail_reason\": \"\"\n        },\n        {\n            \"platform\": \"meta_ig\",\n            \"status\": \"processing\",\n            \"container_id\": \"17954...\",\n            \"fail_reason\": \"\"\n        }\n    ]\n}\n```\n**UI Mapping:**\n* `status === 'processing'`  Show a spinner for that specific platform.\n* `status === 'published'`  Show a green checkmark.\n* `status === 'failed'`  Show a red X and display the `fail_reason`.\n\n---\n\n###  Stop Polling (Terminal State)\n**Action:** Check if **all** platforms in the `results` array have reached a terminal state (`published` or `failed`). Once they have, clear the interval.\n\n```javascript\nconst allDone = results.every(r =\u003e r.status === 'published' || r.status === 'failed');\nif (allDone) {\n    clearInterval(pollingInterval);\n}\n```\n"
-          }
+            "description": "Health check."
+          },
+          "response": [
+            {
+              "name": "200 Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/health",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Health check."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"healthy\"\n}"
+            }
+          ]
         }
       ]
-    },
-    {
-      "name": "[GET] /health",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/health",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "health"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/workspaces/connect/:platform/callback",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/workspaces/connect/:platform/callback",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "workspaces",
-            "connect",
-            "{{platform}}",
-            "callback"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/auth/me",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/auth/me",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "auth",
-            "me"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/slug/:slug",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/slug/:slug",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "slug",
-            "{{slug}}"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/members",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/members",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "members"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/x/connections",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/connections",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "x",
-            "connections"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/x/tweets/in/:tweetId",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/tweets/in/:tweetId?connection_id={{connection_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "x",
-            "tweets",
-            "in",
-            "{{tweetId}}"
-          ],
-          "query": [
-            {
-              "key": "connection_id",
-              "value": "{{connection_id}}",
-              "description": "Optional: The specific X connection ID to use (defaults to first available if omitted)."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/x/tweets/in/:tweetId/full",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/tweets/in/:tweetId/full?connection_id={{connection_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "x",
-            "tweets",
-            "in",
-            "{{tweetId}}",
-            "full"
-          ],
-          "query": [
-            {
-              "key": "connection_id",
-              "value": "{{connection_id}}",
-              "description": "Optional: The specific X connection ID to use (defaults to first available if omitted)."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/x/users/in/:userId",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/users/in/:userId?connection_id={{connection_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "x",
-            "users",
-            "in",
-            "{{userId}}"
-          ],
-          "query": [
-            {
-              "key": "connection_id",
-              "value": "{{connection_id}}",
-              "description": "Optional: The specific X connection ID to use (defaults to first available if omitted)."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/x/spaces/in/:spaceId",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/spaces/in/:spaceId?connection_id={{connection_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "x",
-            "spaces",
-            "in",
-            "{{spaceId}}"
-          ],
-          "query": [
-            {
-              "key": "connection_id",
-              "value": "{{connection_id}}",
-              "description": "Optional: The specific X connection ID to use (defaults to first available if omitted)."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/x/lists/in/:listId",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/x/lists/in/:listId?connection_id={{connection_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "x",
-            "lists",
-            "in",
-            "{{listId}}"
-          ],
-          "query": [
-            {
-              "key": "connection_id",
-              "value": "{{connection_id}}",
-              "description": "Optional: The specific X connection ID to use (defaults to first available if omitted)."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/workspaces/in/:id/connections",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/connections",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "connections"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/posts",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts?workspace_id={{workspace_id}}\u0026status=draft\u0026page=0\u0026limit=20",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            },
-            {
-              "key": "status",
-              "value": "draft",
-              "description": "Optional: Filter by status (draft, scheduled, publishing, published, failed)"
-            },
-            {
-              "key": "page",
-              "value": "0",
-              "description": "Optional: Page number for pagination"
-            },
-            {
-              "key": "limit",
-              "value": "20",
-              "description": "Optional: Number of results per page"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/posts/in/:id",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id?workspace_id={{workspace_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts",
-            "in",
-            "{{id}}"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[GET] /api/in/posts/in/:id/results",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id/results?workspace_id={{workspace_id}}\u0026attempt_id={{attempt_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts",
-            "in",
-            "{{id}}",
-            "results"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            },
-            {
-              "key": "attempt_id",
-              "value": "{{attempt_id}}",
-              "description": "Required: The tracking ID returned by the /publish endpoint to poll real-time status."
-            }
-          ]
-        },
-        "description": "###  Real-Time Status Polling\n\nPass the `?attempt_id={{attempt_id}}` query parameter to track the exact status of a specific publish click.\n\n**Statuses:**\n- `processing`: Platform is still working (show spinner)\n- `published`: Success (show checkmark)\n- `failed`: Error (show `fail_reason`)"
-      }
-    },
-    {
-      "name": "[POST] /api/auth/register/email",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/auth/register/email",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "register",
-            "email"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/auth/register/email/activate",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/auth/register/email/activate",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "register",
-            "email",
-            "activate"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/auth/register/complete",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/auth/register/complete",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "register",
-            "complete"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/auth/signin",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/auth/signin",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "signin"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/in/auth/signout",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/auth/signout",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "auth",
-            "signout"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/in/workspaces",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/in/workspaces/in/:id/members",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/members",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "members"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/in/workspaces/in/:id/connect/in/:platform",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/connect/in/:platform",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "connect",
-            "in",
-            "{{platform}}"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/in/posts",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts?workspace_id={{workspace_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[POST] /api/in/posts/in/:id/publish",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id/publish?workspace_id={{workspace_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts",
-            "in",
-            "{{id}}",
-            "publish"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            }
-          ]
-        },
-        "description": "###  Async Publish Trigger\n\nThis endpoint does **not** block. It initiates the publish process and immediately returns an `attempt_id`.\n\n**Next Step:** Use the returned `attempt_id` to poll the `/results` endpoint.\n\n*(See the \" API Workflows \u0026 Guides\" folder for the full frontend integration guide).*"
-      }
-    },
-    {
-      "name": "[POST] /api/in/posts/in/:id/schedule",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id/schedule?workspace_id={{workspace_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts",
-            "in",
-            "{{id}}",
-            "schedule"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[PUT] /api/in/posts/in/:id",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id?workspace_id={{workspace_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts",
-            "in",
-            "{{id}}"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[DELETE] /api/in/workspaces/in/:id/members/in/:userId",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/members/in/:userId",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "members",
-            "in",
-            "{{userId}}"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[DELETE] /api/in/workspaces/in/:id/connections/:connectionId",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/workspaces/in/:id/connections/:connectionId",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "workspaces",
-            "in",
-            "{{id}}",
-            "connections",
-            "{{connectionId}}"
-          ]
-        }
-      }
-    },
-    {
-      "name": "[DELETE] /api/in/posts/in/:id",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "ngrok-skip-browser-warning",
-            "value": "true",
-            "type": "text"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}",
-            "type": "text"
-          },
-          {
-            "key": "X-Session-Id",
-            "value": "{{session_id}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:1040/api/in/posts/in/:id?workspace_id={{workspace_id}}",
-          "host": [
-            "http://127.0.0.1:1040"
-          ],
-          "path": [
-            "api",
-            "in",
-            "posts",
-            "in",
-            "{{id}}"
-          ],
-          "query": [
-            {
-              "key": "workspace_id",
-              "value": "{{workspace_id}}",
-              "description": "Required: The UUID of the workspace this post belongs to."
-            }
-          ]
-        }
-      }
     }
   ]
 }

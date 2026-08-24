@@ -33,6 +33,16 @@ columns:
     type: boolean
     not_null: true
     default: false
+  needs_reauth:
+    type: boolean
+    not_null: true
+    default: false
+  reauth_reason:
+    type: text
+    not_null: false
+  refresh_claimed_at:
+    type: timestamptz
+    not_null: false
 
 indexes:
   - name: idx_meta_connections_workspace
@@ -40,3 +50,4 @@ indexes:
   - name: idx_meta_connections_unique
     columns: [workspace_id, account_id]
     unique: true
+  

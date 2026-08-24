@@ -1,5 +1,7 @@
 # DEV
 GOOS=linux GOARCH=amd64 go build -o bin/api-dev ./cmd/api
+GOOS=linux GOARCH=amd64 go build -o bin/worker-dev ./cmd/worker
+
 
 # PROD
 GOOS=linux GOARCH=amd64 go build -tags=prod -o bin/api ./cmd/api

@@ -22,6 +22,18 @@ type reniMailRes struct {
 }
 
 // SendEmail sends a transactional email via the configured Reni mail API.
+// SendEmail godoc
+// @Summary SendEmail
+// @Description Auto-generated thorough documentation for SendEmail
+// @Tags utils
+// @Produce json
+// @Param body body string true "body"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func SendEmail(to, subject, body string) error {
 	var res reniMailRes
 

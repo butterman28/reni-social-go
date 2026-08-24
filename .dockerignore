@@ -6,3 +6,4 @@ schema.exe
 docs/
 reni_social_api.postman_collection.json
 docker_build/
+export_postman.go

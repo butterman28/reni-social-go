@@ -67,8 +67,9 @@ type Config struct {
 	// ──────────────────────────────────────────
 	SchedulerPollIntervalSecs int    // e.g. 30
 	ScheduledPostsQueue       string // Redis key, e.g. "social:post_queue"
-	MaxConcurrentPublishes    int    
-	PublishTimeoutMinutes     int  
+	RetryPostsQueue           string // Redis sorted set for delayed retries
+	MaxConcurrentPublishes    int
+	PublishTimeoutMinutes     int
 
 	// ──────────────────────────────────────────
 	// Media Worker
@@ -80,6 +81,19 @@ type Config struct {
 	// Notifications (email/SMS)
 	// ──────────────────────────────────────────
 	NotifyQueue string
+	// ──────────────────────────────────────────
+	// Meta Token Refresher
+	// ──────────────────────────────────────────
+	MetaRefreshCheckIntervalHours int
+	MetaRefreshBeforeDays         int
+	MetaRefreshBatchSize          int
+	MetaRefreshMaxConcurrency     int
+	// ──────────────────────────────────────────
+	// linked reauth refresher 
+	// ──────────────────────────────────────────
+	LinkedInExpiryCheckIntervalHours int
+	LinkedInExpiryWarnBeforeDays     int
+	LinkedInExpiryBatchSize          int
 }
 
 var C *Config

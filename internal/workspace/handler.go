@@ -323,25 +323,46 @@ func ConnectPlatform(c *fiber.Ctx) error {
 		})
 	}
 
-	//NEW: Check if an active connection exists, AND revive it if it's soft-deleted but valid
-	hasActive, err := CheckAndReviveConnection(c.UserContext(), wsID, p)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
-			Status:  false,
-			Message: "Failed to check existing connections: " + err.Error(),
-		})
+	switch p {
+	case "linkedin":
+			if config.C.LinkedInClientID == "" || config.C.LinkedInClientSecret == "" {
+				return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+					Status:  false,
+					Message: "LinkedIn client credentials are not configured. Please contact support.",
+				})
+			}
+		case "meta":
+			if config.C.InstagramAppID == "" || config.C.InstagramAppSecret == "" {
+				return c.Status(fiber.StatusBadRequest).JSON(types.APIResponse[any]{
+					Status:  false,
+					Message: "Instagram (Meta) client credentials are not configured. Please contact support.",
+				})
+			}
+		}
+
+		// ?force=true bypasses the "already connected" short-circuit so the
+	// frontend's Reconnect button can always trigger a fresh OAuth flow
+	// (needed when a connection is flagged needs_reauth but not yet expired).
+	force := c.QueryBool("force")
+
+	if !force {
+		hasActive, err := CheckAndReviveConnection(c.UserContext(), wsID, p)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(types.APIResponse[any]{
+				Status:  false,
+				Message: "Failed to check existing connections: " + err.Error(),
+			})
+		}
+		if hasActive {
+			return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+				Status:  true,
+				Message: "Already connected",
+				Data:    fiber.Map{"already_connected": true},
+			})
+		}
 	}
 
-	// If it exists (or was just revived), skip OAuth and tell the frontend
-	if hasActive {
-		return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
-			Status:  true,
-			Message: "Already connected",
-			Data:    fiber.Map{"already_connected": true},
-		})
-	}
-
-	// 3. Proceed with normal OAuth flow if no valid connection exists
+	// 3. Proceed with normal OAuth flow
 	state := wsID + ":" + utils.RandomAlphaNumeric(16)
 	utils.RDB.Set(utils.Ctx, "oauth_state:"+state, wsID, 10*60*1000000000)
 	
@@ -726,5 +747,37 @@ func GetXList(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
 		Status: true, Message: "OK", Data: data,
+	})
+}
+
+// ReauthStatus handles GET /api/in/workspaces/in/:id/connections/reauth-status
+// Tokenless advisory endpoint — safe for global frontend polling.
+// ReauthStatus godoc
+// @Summary GET /api/in/workspaces/in/:id/connections/reauth-status
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Security SessionId
+// @Param id path string true "id"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} map[string]string
+// @Router /api/in/workspaces/in/{id}/connections/reauth-status [get]
+func ReauthStatus(c *fiber.Ctx) error {
+	userID := c.Locals("userid").(string)
+	wsID := c.Params("id")
+
+	alerts, err := ListReauthAlerts(c.Context(), wsID, userID)
+	if err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(types.APIResponse[any]{
+			Status: false, Message: err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(types.APIResponse[any]{
+		Status:  true,
+		Message: "OK",
+		Data: fiber.Map{
+			"needs_attention": len(alerts) > 0,
+			"alerts":          alerts,
+		},
 	})
 }

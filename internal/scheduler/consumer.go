@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -18,11 +19,20 @@ import (
 	"reni-social/pkg/config"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // StartConsumer is the Stage 2 entry point. It blocks on BRPOP from the Redis
 // queue and dispatches each post ID to publishPost in a goroutine pool.
 // Concurrency cap is now configurable via config.C.MaxConcurrentPublishes.
+// StartConsumer godoc
+// @Summary StartConsumer
+// @Description Auto-generated thorough documentation for StartConsumer
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func StartConsumer(db *sql.DB) {
 	sem := make(chan struct{}, config.C.MaxConcurrentPublishes)
 	log.Printf(" [Consumer] Started — listening on queue: %s (max concurrent: %d)",
@@ -44,6 +54,15 @@ func StartConsumer(db *sql.DB) {
 // publishPost fetches a post from DB, fans out to each platform adapter
 // concurrently. Each platform gets its OWN context with its own timeout,
 // so one slow platform can never starve another.
+// publishPost godoc
+// @Summary publishPost
+// @Description Auto-generated thorough documentation for publishPost
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param postID body string true "postID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func publishPost(db *sql.DB, postID string) {
 	// Short context just for DB reads
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -62,6 +81,7 @@ func publishPost(db *sql.DB, postID string) {
 		_ = markPostFailed(dbCtx, db, postID, err.Error())
 		return
 	}
+	
 
 	if post.CurrentPublishAttemptID == nil {
 		log.Printf(" [Consumer] post %s has no attempt ID", postID)
@@ -69,6 +89,18 @@ func publishPost(db *sql.DB, postID string) {
 		return
 	}
 	attemptID := *post.CurrentPublishAttemptID
+
+	have := make(map[domain.Platform]bool)
+	for _, c := range connections {
+		have[c.Platform] = true
+	}
+	for _, p := range post.Platforms {
+		if !have[p] {
+			_ = InsertPublishResult(dbCtx, db, postID, attemptID, string(p), uuid.Nil,
+				ResultFailed, "", "", "",
+				fmt.Sprintf("%s: no active connection (deleted, expired, or needs re-auth)", p))
+		}
+	}
 
 	perPlatformTimeout := time.Duration(config.C.PublishTimeoutMinutes) * time.Minute
 
@@ -149,6 +181,19 @@ func publishPost(db *sql.DB, postID string) {
 // DB helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
+// saveContainerID godoc
+// @Summary saveContainerID
+// @Description Auto-generated thorough documentation for saveContainerID
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param containerID body string true "containerID"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func saveContainerID(ctx context.Context, db *sql.DB, postID, containerID string) error {
 	_, err := db.ExecContext(ctx,
 		`UPDATE posts SET ig_container_id=$1, ig_container_status='processing', updated_at=NOW() WHERE id=$2`,
@@ -156,6 +201,19 @@ func saveContainerID(ctx context.Context, db *sql.DB, postID, containerID string
 	return err
 }
 
+// fetchPost godoc
+// @Summary fetchPost
+// @Description Auto-generated thorough documentation for fetchPost
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param postID body string true "postID"
+// @Success 200 {object} domain.Post "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, error) {
 	var p domain.Post
 	var mediaJSON, platformJSON []byte
@@ -200,10 +258,25 @@ func fetchPost(ctx context.Context, db *sql.DB, postID string) (*domain.Post, er
 	return &p, nil
 }
 
+// fetchConnections godoc
+// @Summary fetchConnections
+// @Description Auto-generated thorough documentation for fetchConnections
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param workspaceID body string true "workspaceID"
+// @Param platforms body array true "platforms"
+// @Success 200 {object} []domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platforms []domain.Platform) ([]*domain.PlatformConnection, error) {
 	if len(platforms) == 0 {
 		return nil, nil
 	}
+
 	var conns []*domain.PlatformConnection
 	hasLinkedIn := false
 	hasMeta := false
@@ -218,10 +291,15 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			hasX = true
 		}
 	}
+
 	if hasLinkedIn {
 		rows, err := db.QueryContext(ctx, `
 			SELECT id, workspace_id, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM linkedin_connections WHERE workspace_id = $1
+			FROM linkedin_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND needs_reauth = false
+			  AND expires_at > NOW()
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -235,10 +313,15 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			conns = append(conns, c)
 		}
 	}
+
 	if hasMeta {
 		rows, err := db.QueryContext(ctx, `
 			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM meta_connections WHERE workspace_id = $1
+			FROM meta_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND needs_reauth = false
+			  AND expires_at > NOW()
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -263,10 +346,14 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			}
 		}
 	}
+
 	if hasX {
 		rows, err := db.QueryContext(ctx, `
 			SELECT id, workspace_id, platform, account_id, account_name, access_token, refresh_token, expires_at, created_at
-			FROM x_connections WHERE workspace_id = $1
+			FROM x_connections
+			WHERE workspace_id = $1
+			  AND is_deleted = false
+			  AND (expires_at IS NULL OR expires_at > NOW())
 		`, workspaceID)
 		if err != nil {
 			return nil, err
@@ -282,31 +369,56 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 			conns = append(conns, c)
 		}
 	}
+
 	return conns, nil
 }
 
+// markPostFailed godoc
+// @Summary markPostFailed
+// @Description Auto-generated thorough documentation for markPostFailed
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Param reason body string true "reason"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) error {
 	var retryCount, maxRetries int
 	err := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
 	if err == nil && retryCount < maxRetries {
 		newAttemptID := uuid.New()
 		newRetryCount := retryCount + 1
-		log.Printf("🔄 [Consumer] Retrying post %s (attempt %d/%d) due to error: %s", postID, newRetryCount, maxRetries, reason)
+
+		// 🆕 Exponential backoff: 10s, 20s, 40s... capped at 5 minutes
+		delay := time.Duration(math.Pow(2, float64(newRetryCount-1))) * 10 * time.Second
+		if delay > 5*time.Minute {
+			delay = 5 * time.Minute
+		}
+		score := float64(time.Now().Add(delay).Unix())
+
+		log.Printf("🔄 [Consumer] Scheduling retry for post %s (attempt %d/%d) in %v due to error: %s", postID, newRetryCount, maxRetries, delay, reason)
 
 		_, updateErr := db.ExecContext(ctx, `
-			UPDATE posts
-			SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
-			WHERE id = $4
-		`, newRetryCount, newAttemptID, reason, postID)
+UPDATE posts
+SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
+WHERE id = $4
+`, newRetryCount, newAttemptID, reason, postID)
 		if updateErr != nil {
 			return updateErr
 		}
 
-		if enqueueErr := utils.RDB.LPush(utils.Ctx, config.C.ScheduledPostsQueue, postID).Err(); enqueueErr != nil {
-			log.Printf("⚠️  [Consumer] Failed to re-enqueue post %s for retry: %v", postID, enqueueErr)
-		} else {
-			return nil
+		// 🆕 Add to Redis sorted set for delayed retry (replaces immediate LPUSH)
+		if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
+			Score:  score,
+			Member: postID,
+		}).Err(); zaddErr != nil {
+			log.Printf("⚠️  [Consumer] Failed to schedule retry for post %s: %v", postID, zaddErr)
 		}
+		return nil
 	}
 
 	_, err = db.ExecContext(ctx,
@@ -314,11 +426,18 @@ func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) erro
 		reason, postID)
 	return err
 }
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Platform adapter factory
 // ──────────────────────────────────────────────────────────────────────────────
 
+// adapterForPlatform godoc
+// @Summary adapterForPlatform
+// @Description Auto-generated thorough documentation for adapterForPlatform
+// @Tags scheduler
+// @Produce json
+// @Param p body string true "p"
+// @Success 200 {object} platform.Publisher "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func adapterForPlatform(p domain.Platform) platform.Publisher {
 	switch p {
 	case domain.PlatformLinkedIn:

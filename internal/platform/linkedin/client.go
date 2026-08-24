@@ -47,6 +47,13 @@ type Client struct {
 }
 
 // New returns a new LinkedIn Client.
+// New godoc
+// @Summary New
+// @Description Auto-generated thorough documentation for New
+// @Tags linkedin
+// @Produce json
+// @Success 200 {object} Client "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func New() *Client {
 	return &Client{
 		// 30s instead of 15s — media downloads/uploads need more headroom
@@ -63,6 +70,16 @@ var _ platform.Publisher = (*Client)(nil)
 // ──────────────────────────────────────────────────────────────────────────────
 
 // AuthorizationURL returns the URL the user should be redirected to for consent.
+// AuthorizationURL godoc
+// @Summary AuthorizationURL
+// @Description Auto-generated thorough documentation for AuthorizationURL
+// @Tags linkedin
+// @Produce json
+// @Param state body string true "state"
+// @Param id body string true "id"
+// @Param platform body string true "platform"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func AuthorizationURL(state string, id string, platform string) string {
 	params := url.Values{}
 	params.Set("response_type", "code")
@@ -74,6 +91,18 @@ func AuthorizationURL(state string, id string, platform string) string {
 }
 
 // ExchangeCode exchanges an authorization code for an access token.
+// ExchangeCode godoc
+// @Summary ExchangeCode
+// @Description Auto-generated thorough documentation for ExchangeCode
+// @Tags linkedin
+// @Produce json
+// @Param code body string true "code"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) ExchangeCode(ctx context.Context, code string) (*domain.PlatformConnection, error) {
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
@@ -104,6 +133,18 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*domain.Platfor
 }
 
 // RefreshToken exchanges a refresh token for a new access token.
+// RefreshToken godoc
+// @Summary RefreshToken
+// @Description Auto-generated thorough documentation for RefreshToken
+// @Tags linkedin
+// @Produce json
+// @Param conn body object true "conn"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnection) (*domain.PlatformConnection, error) {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
@@ -146,6 +187,19 @@ func (c *Client) RefreshToken(ctx context.Context, conn *domain.PlatformConnecti
 //   - post.ArticleURL non-empty → Article/URL share (preview card via PublishArticle)
 //   - post.MediaURLs non-empty  → Image or Video share (first URL only)
 //   - otherwise                 → plain Text share
+// Publish godoc
+// @Summary Publish
+// @Description Auto-generated thorough documentation for Publish
+// @Tags linkedin
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	// 1. Article share takes priority — explicit preview-card intent.
 	if post.ArticleURL != "" {
@@ -165,12 +219,38 @@ func (c *Client) Publish(ctx context.Context, post *domain.Post, conn *domain.Pl
 //
 // Not part of the platform.Publisher interface — call it directly when you
 // need this share type.
+// PublishArticle godoc
+// @Summary PublishArticle
+// @Description Auto-generated thorough documentation for PublishArticle
+// @Tags linkedin
+// @Produce json
+// @Param conn body object true "conn"
+// @Param title body string true "title"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) PublishArticle(ctx context.Context, conn *domain.PlatformConnection, content, articleURL, title string) (*platform.PublishResult, error) {
 	body := buildArticleShare(conn.AccountID, content, articleURL, title)
 	return c.publishShare(ctx, body, conn.AccessToken)
 }
 
 // publishMedia handles the 3-step image/video flow: register → upload → share.
+// publishMedia godoc
+// @Summary publishMedia
+// @Description Auto-generated thorough documentation for publishMedia
+// @Tags linkedin
+// @Produce json
+// @Param mediaURL body string true "mediaURL"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) publishMedia(ctx context.Context, content, mediaURL string, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	data, contentType, err := c.downloadMedia(ctx, mediaURL)
 	if err != nil {
@@ -204,6 +284,19 @@ func (c *Client) publishMedia(ctx context.Context, content, mediaURL string, con
 
 // publishShare sends a fully-built UGC post payload to the ugcPosts endpoint.
 // Shared by text, article, and media shares — only the payload differs.
+// publishShare godoc
+// @Summary publishShare
+// @Description Auto-generated thorough documentation for publishShare
+// @Tags linkedin
+// @Produce json
+// @Param body body object true "body"
+// @Param accessToken body string true "accessToken"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) publishShare(ctx context.Context, body map[string]any, accessToken string) (*platform.PublishResult, error) {
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -250,6 +343,18 @@ func (c *Client) publishShare(ctx context.Context, body map[string]any, accessTo
 // video asset. Returns the URL to PUT the binary to, the asset URN to
 // reference in the share payload, and any extra headers LinkedIn wants set
 // on the upload PUT request.
+// registerUpload godoc
+// @Summary registerUpload
+// @Description Auto-generated thorough documentation for registerUpload
+// @Tags linkedin
+// @Produce json
+// @Param recipe body string true "recipe"
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) registerUpload(ctx context.Context, accessToken, authorURN, recipe string) (uploadURL, asset string, extraHeaders map[string]string, err error) {
 	payload := map[string]any{
 		"registerUploadRequest": map[string]any{
@@ -314,6 +419,21 @@ func (c *Client) registerUpload(ctx context.Context, accessToken, authorURN, rec
 }
 
 // uploadAsset PUTs the raw media bytes to the upload URL LinkedIn issued.
+// uploadAsset godoc
+// @Summary uploadAsset
+// @Description Auto-generated thorough documentation for uploadAsset
+// @Tags linkedin
+// @Produce json
+// @Param accessToken body string true "accessToken"
+// @Param data body array true "data"
+// @Param contentType body string true "contentType"
+// @Param extraHeaders body object true "extraHeaders"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) uploadAsset(ctx context.Context, uploadURL, accessToken string, data []byte, contentType string, extraHeaders map[string]string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, bytes.NewReader(data))
 	if err != nil {
@@ -343,6 +463,18 @@ func (c *Client) uploadAsset(ctx context.Context, uploadURL, accessToken string,
 // downloadMedia fetches the bytes at a media URL (e.g. a post.MediaURLs
 // entry) and returns them with the detected content type. Prefers the
 // response's Content-Type header; falls back to sniffing the bytes.
+// downloadMedia godoc
+// @Summary downloadMedia
+// @Description Auto-generated thorough documentation for downloadMedia
+// @Tags linkedin
+// @Produce json
+// @Param mediaURL body string true "mediaURL"
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) downloadMedia(ctx context.Context, mediaURL string) (data []byte, contentType string, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, mediaURL, nil)
 	if err != nil {
@@ -385,6 +517,18 @@ type tokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
+// fetchToken godoc
+// @Summary fetchToken
+// @Description Auto-generated thorough documentation for fetchToken
+// @Tags linkedin
+// @Produce json
+// @Param data body string true "data"
+// @Success 200 {object} tokenResponse "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchToken(ctx context.Context, data url.Values) (*tokenResponse, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -410,6 +554,18 @@ func (c *Client) fetchToken(ctx context.Context, data url.Values) (*tokenRespons
 	return &tr, nil
 }
 
+// fetchProfile godoc
+// @Summary fetchProfile
+// @Description Auto-generated thorough documentation for fetchProfile
+// @Tags linkedin
+// @Produce json
+// @Param accessToken body string true "accessToken"
+// @Success 200 {string} error "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) fetchProfile(ctx context.Context, accessToken string) (id, name string, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, meURL, nil)
 	if err != nil {
@@ -446,6 +602,14 @@ func (c *Client) fetchProfile(ctx context.Context, accessToken string) (id, name
 // ──────────────────────────────────────────────────────────────────────────────
 
 // buildTextShare constructs a plain text share payload (no media, no link).
+// buildTextShare godoc
+// @Summary buildTextShare
+// @Description Auto-generated thorough documentation for buildTextShare
+// @Tags linkedin
+// @Produce json
+// @Param content body string true "content"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func buildTextShare(authorURN, content string) map[string]any {
 	return map[string]any{
 		"author":         authorURN,
@@ -466,6 +630,14 @@ func buildTextShare(authorURN, content string) map[string]any {
 
 // buildArticleShare constructs an Article/URL share payload — a link shown
 // as a preview card, no uploaded media.
+// buildArticleShare godoc
+// @Summary buildArticleShare
+// @Description Auto-generated thorough documentation for buildArticleShare
+// @Tags linkedin
+// @Produce json
+// @Param title body string true "title"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func buildArticleShare(authorURN, content, articleURL, title string) map[string]any {
 	media := map[string]any{
 		"status":      "READY",
@@ -496,6 +668,14 @@ func buildArticleShare(authorURN, content, articleURL, title string) map[string]
 // buildMediaShare constructs an Image or Video share payload, referencing an
 // asset URN obtained from registerUpload + uploadAsset. mediaCategory must
 // be "IMAGE" or "VIDEO".
+// buildMediaShare godoc
+// @Summary buildMediaShare
+// @Description Auto-generated thorough documentation for buildMediaShare
+// @Tags linkedin
+// @Produce json
+// @Param assetURN body string true "assetURN"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func buildMediaShare(authorURN, content, mediaCategory, assetURN string) map[string]any {
 	return map[string]any{
 		"author":         authorURN,

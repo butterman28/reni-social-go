@@ -40,6 +40,14 @@ var (
 
 // InstagramLoginAuthorizationURL returns the consent URL for the direct
 // Instagram Login flow (no Facebook Page involved).
+// InstagramLoginAuthorizationURL godoc
+// @Summary InstagramLoginAuthorizationURL
+// @Description Auto-generated thorough documentation for InstagramLoginAuthorizationURL
+// @Tags meta
+// @Produce json
+// @Param state body string true "state"
+// @Success 200 {string} string "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func InstagramLoginAuthorizationURL(state string) string {
 	params := url.Values{}
 	params.Set("force_reauth", "true")
@@ -53,6 +61,18 @@ func InstagramLoginAuthorizationURL(state string) string {
 
 // ExchangeInstagramLoginCode exchanges an authorization code for a
 // long-lived access token and resolves the IG user id/username via /me.
+// ExchangeInstagramLoginCode godoc
+// @Summary ExchangeInstagramLoginCode
+// @Description Auto-generated thorough documentation for ExchangeInstagramLoginCode
+// @Tags meta
+// @Produce json
+// @Param code body string true "code"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) ExchangeInstagramLoginCode(ctx context.Context, code string) (*domain.PlatformConnection, error) {
 	// Step 1: short-lived token (api.instagram.com)
 	form := url.Values{}
@@ -158,6 +178,18 @@ func (c *Client) ExchangeInstagramLoginCode(ctx context.Context, code string) (*
 
 // RefreshInstagramLoginToken refreshes a long-lived Instagram Login token.
 // Must be called before the existing token expires (60-day lifetime).
+// RefreshInstagramLoginToken godoc
+// @Summary RefreshInstagramLoginToken
+// @Description Auto-generated thorough documentation for RefreshInstagramLoginToken
+// @Tags meta
+// @Produce json
+// @Param conn body object true "conn"
+// @Success 200 {object} domain.PlatformConnection "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) RefreshInstagramLoginToken(ctx context.Context, conn *domain.PlatformConnection) (*domain.PlatformConnection, error) {
 	params := url.Values{}
 	params.Set("grant_type", "ig_refresh_token")
@@ -198,6 +230,19 @@ func (c *Client) RefreshInstagramLoginToken(ctx context.Context, conn *domain.Pl
 // PublishInstagramLogin posts a media container then publishes it, hitting
 // graph.instagram.com directly against the IG-scoped user id — no Page
 // lookup needed under this flow.
+// PublishInstagramLogin godoc
+// @Summary PublishInstagramLogin
+// @Description Auto-generated thorough documentation for PublishInstagramLogin
+// @Tags meta
+// @Produce json
+// @Param post body object true "post"
+// @Param conn body object true "conn"
+// @Success 200 {object} platform.PublishResult "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, conn *domain.PlatformConnection) (*platform.PublishResult, error) {
 	if len(post.MediaURLs) == 0 {
 		return nil, fmt.Errorf("instagram-login: Instagram requires at least one image or video — text-only posts are not supported by the API")
@@ -255,6 +300,18 @@ func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, c
 }
 // waitForInstagramLoginContainerReady polls a media container's processing
 // status until FINISHED, errors out, or times out (60s, every 3s).
+// waitForInstagramLoginContainerReady godoc
+// @Summary waitForInstagramLoginContainerReady
+// @Description Auto-generated thorough documentation for waitForInstagramLoginContainerReady
+// @Tags meta
+// @Produce json
+// @Param accessToken body string true "accessToken"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Not Found"
+// @Failure 500 {object} map[string]string "Internal Server Error"
 func (c *Client) waitForInstagramLoginContainerReady(ctx context.Context, base, containerID, accessToken string) error {
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Now().Before(deadline) {

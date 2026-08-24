@@ -73,6 +73,7 @@ func init() {
 		// Scheduler
 		SchedulerPollIntervalSecs: 30,
 		ScheduledPostsQueue:       "social:post_queue_dev",
+		RetryPostsQueue:           "social:post_retry_queue_dev",
 		MaxConcurrentPublishes:    25,
 		PublishTimeoutMinutes:     5,
 
@@ -82,5 +83,15 @@ func init() {
 	
 		// notifications 
 		NotifyQueue: "social:notify_queue_dev",
+
+		// Meta Token Refresher
+		MetaRefreshCheckIntervalHours: 6,   
+		MetaRefreshBeforeDays:         15,   
+		MetaRefreshBatchSize:          50,   
+		MetaRefreshMaxConcurrency:     5,  
+		// LinkedIn Expiry Monitor
+		LinkedInExpiryCheckIntervalHours: 6,
+		LinkedInExpiryWarnBeforeDays:     7,
+		LinkedInExpiryBatchSize:          50,  
 	}
 }
