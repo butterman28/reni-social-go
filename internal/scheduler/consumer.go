@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"sync"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"reni-social/pkg/config"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 )
 
 // StartConsumer is the Stage 2 entry point. It blocks on BRPOP from the Redis
@@ -81,7 +79,6 @@ func publishPost(db *sql.DB, postID string) {
 		_ = markPostFailed(dbCtx, db, postID, err.Error())
 		return
 	}
-	
 
 	if post.CurrentPublishAttemptID == nil {
 		log.Printf(" [Consumer] post %s has no attempt ID", postID)
@@ -106,25 +103,26 @@ func publishPost(db *sql.DB, postID string) {
 
 	var wg sync.WaitGroup
 
-	// Check platforms that have already succeeded across previous attempts to avoid duplicate posts
-	publishedPlatforms := make(map[string]bool)
+	// Check platforms that have already succeeded or are actively processing
+	// across previous attempts to avoid duplicate posts (e.g. IG video containers).
+	skipPlatforms := make(map[string]bool)
 	pRows, pErr := db.QueryContext(dbCtx, `
 		SELECT DISTINCT platform FROM publish_results
-		WHERE post_id = $1 AND status = 'published'
+		WHERE post_id = $1 AND status IN ('published', 'processing')
 	`, postID)
 	if pErr == nil {
 		defer pRows.Close()
 		for pRows.Next() {
 			var pStr string
 			if err := pRows.Scan(&pStr); err == nil {
-				publishedPlatforms[pStr] = true
+				skipPlatforms[pStr] = true
 			}
 		}
 	}
 
 	for _, conn := range connections {
-		if publishedPlatforms[string(conn.Platform)] {
-			log.Printf("ℹ️  [Consumer] Platform %s already published for post %s — skipping retry", conn.Platform, postID)
+		if skipPlatforms[string(conn.Platform)] {
+			log.Printf("ℹ️  [Consumer] Platform %s already published or processing for post %s — skipping retry", conn.Platform, postID)
 			continue
 		}
 
@@ -176,30 +174,9 @@ func publishPost(db *sql.DB, postID string) {
 		log.Printf(" [Consumer] finalize post %s: %v", postID, err)
 	}
 }
-
 // ──────────────────────────────────────────────────────────────────────────────
 // DB helpers
 // ──────────────────────────────────────────────────────────────────────────────
-
-// saveContainerID godoc
-// @Summary saveContainerID
-// @Description Auto-generated thorough documentation for saveContainerID
-// @Tags scheduler
-// @Produce json
-// @Param db body object true "db"
-// @Param containerID body string true "containerID"
-// @Success 200 {object} map[string]any "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
-func saveContainerID(ctx context.Context, db *sql.DB, postID, containerID string) error {
-	_, err := db.ExecContext(ctx,
-		`UPDATE posts SET ig_container_id=$1, ig_container_status='processing', updated_at=NOW() WHERE id=$2`,
-		containerID, postID)
-	return err
-}
 
 // fetchPost godoc
 // @Summary fetchPost
@@ -387,45 +364,21 @@ func fetchConnections(ctx context.Context, db *sql.DB, workspaceID string, platf
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
 func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) error {
-	var retryCount, maxRetries int
-	err := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
-	if err == nil && retryCount < maxRetries {
-		newAttemptID := uuid.New()
-		newRetryCount := retryCount + 1
-
-		// 🆕 Exponential backoff: 10s, 20s, 40s... capped at 5 minutes
-		delay := time.Duration(math.Pow(2, float64(newRetryCount-1))) * 10 * time.Second
-		if delay > 5*time.Minute {
-			delay = 5 * time.Minute
-		}
-		score := float64(time.Now().Add(delay).Unix())
-
-		log.Printf("🔄 [Consumer] Scheduling retry for post %s (attempt %d/%d) in %v due to error: %s", postID, newRetryCount, maxRetries, delay, reason)
-
-		_, updateErr := db.ExecContext(ctx, `
-UPDATE posts
-SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
-WHERE id = $4
-`, newRetryCount, newAttemptID, reason, postID)
-		if updateErr != nil {
-			return updateErr
-		}
-
-		// 🆕 Add to Redis sorted set for delayed retry (replaces immediate LPUSH)
-		if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
-			Score:  score,
-			Member: postID,
-		}).Err(); zaddErr != nil {
-			log.Printf("⚠️  [Consumer] Failed to schedule retry for post %s: %v", postID, zaddErr)
-		}
+	scheduled, err := scheduleRetry(ctx, db, postID, reason)
+	if err != nil {
+		return err
+	}
+	if scheduled {
 		return nil
 	}
 
+	// Max retries exceeded, mark as permanently failed
 	_, err = db.ExecContext(ctx,
 		`UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW() WHERE id=$2`,
 		reason, postID)
 	return err
 }
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Platform adapter factory
 // ──────────────────────────────────────────────────────────────────────────────

@@ -236,6 +236,8 @@ func Publish(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]any
 // @Failure 400 {object} map[string]string
 // @Router /api/in/posts/in/{id}/schedule [post]
+// internal/post/handler.go
+
 func Schedule(c *fiber.Ctx) error {
 	userID := c.Locals("userid").(string)
 	postID := c.Params("id")
@@ -243,7 +245,7 @@ func Schedule(c *fiber.Ctx) error {
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
-	
+
 	// 🔒 AUTHORIZATION CHECK
 	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
@@ -256,9 +258,12 @@ func Schedule(c *fiber.Ctx) error {
 	if err := c.BodyParser(&body); err != nil || body.ScheduledAt.IsZero() {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "scheduled_at (ISO8601) is required"})
 	}
+
+	// Pass the platforms slice. The service will check len(platforms) > 0
 	if err := SchedulePost(c.Context(), postID, workspaceID, body.ScheduledAt, body.Platforms); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+
 	return c.JSON(fiber.Map{"message": "post scheduled", "scheduled_at": body.ScheduledAt})
 }
 

@@ -40,12 +40,6 @@ columns:
   fail_reason:
     type: text
     not_null: false
-  ig_container_id:
-    type: varchar(255)
-    not_null: false
-  ig_container_status:
-    type: varchar(50)
-    not_null: false
   created_at:
     type: timestamptz
     not_null: true

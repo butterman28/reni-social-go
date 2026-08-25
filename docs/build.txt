@@ -1,7 +1,10 @@
 # DEV
 GOOS=linux GOARCH=amd64 go build -o bin/api-dev ./cmd/api
 GOOS=linux GOARCH=amd64 go build -o bin/worker-dev ./cmd/worker
-
+or 
+just run git comitt a pre-commit hook is there to automatically build it for you into bin 
+# bringing the schema part 
+go run ./cmd/schema
 
 # PROD
 GOOS=linux GOARCH=amd64 go build -tags=prod -o bin/api ./cmd/api

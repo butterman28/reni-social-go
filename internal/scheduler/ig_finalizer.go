@@ -161,7 +161,7 @@ func finalizeIGContainers(db *sql.DB) error {
 	})
 	if len(connIDs) > 0 {
 		credRows, err := db.QueryContext(ctx,
-			`SELECT id::text, account_id, access_token FROM meta_connections WHERE id = ANY($1::uuid[])`,
+			`SELECT id::text, account_id, access_token FROM meta_connections WHERE id = ANY($1::uuid[]) AND is_deleted = false AND needs_reauth = false`,
 			pq.Array(connIDs))
 		if err != nil {
 			log.Printf("  [IG Finalizer] error fetching credentials: %v", err)
@@ -198,8 +198,11 @@ func finalizeIGContainers(db *sql.DB) error {
 
 			creds, ok := credMap[connIDStr]
 			if !ok {
-				log.Printf("  [IG Finalizer] missing credentials for connection %s", connIDStr)
-				releaseClaim(db, p.resultID)
+				log.Printf("  [IG Finalizer] missing credentials for connection %s (likely deleted or revoked)", connIDStr)
+				// Fail the result immediately instead of releasing the claim to loop
+				bgCtx := context.Background()
+				_ = UpdatePublishResult(bgCtx, db, p.resultID, p.postID, p.attemptID, "meta_ig", ResultFailed, "", "", "Instagram connection was deleted or revoked while video was processing")
+				_ = FinalizePostStatus(bgCtx, db, p.postID, p.attemptID)
 				return
 			}
 
