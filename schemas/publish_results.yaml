@@ -41,11 +41,14 @@ columns:
   connection_id:
     type: uuid
     not_null: false
+  claimed_at:
+    type: timestamptz
+    not_null: false
 
 indexes:
   - name: idx_publish_results_post_id
     columns: [post_id]
   - name: idx_publish_results_platform_status
-    columns: [platform, status]
+    columns: [platform, status,claimed_at]
   - name: idx_publish_results_attempt
     columns: [post_id, publish_attempt_id]

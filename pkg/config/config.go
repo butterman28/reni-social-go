@@ -94,6 +94,9 @@ type Config struct {
 	LinkedInExpiryCheckIntervalHours int
 	LinkedInExpiryWarnBeforeDays     int
 	LinkedInExpiryBatchSize          int
+
+	ZombiePostTimeoutMinutes int // How long before a 'publishing' post is considered a zombie
+
 }
 
 var C *Config

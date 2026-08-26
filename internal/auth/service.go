@@ -525,7 +525,7 @@ func CompleteRegister(ctx context.Context, req CompleteRegisterRequest) (*Comple
 
 	// 4. Overwrite token field in response with the local session ID
 	data.Token = sessionToken
-	// data.Pword = ""
+	data.Pword = ""
 	res.Data = data
 
 	return &res, nil

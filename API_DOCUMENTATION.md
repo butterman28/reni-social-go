@@ -162,10 +162,6 @@ Step 3 — completes registration. On success, the backend also creates a **loca
   },
   "http_status": 200
 }
-```
-Note: `pword` is echoed back in the response `data` (see `CompleteRegisterData.Pword`) — the code that would blank it out (`// data.Pword = ""`) is commented out in `internal/auth/service.go`.
-
----
 
 ### 1.4 `POST /api/auth/signin`
 Logs in via Reni Central, upserts a local user row, and issues a local session.

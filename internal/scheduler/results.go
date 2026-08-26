@@ -5,14 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
-	"math"
 	"reni-social/internal/utils"
-	"reni-social/pkg/config"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 )
 
 // PublishResultStatus mirrors the lifecycle of a single platform publish.
@@ -218,73 +214,50 @@ func UpdatePublishResult(ctx context.Context, db *sql.DB, resultID string, postI
 func FinalizePostStatus(ctx context.Context, db *sql.DB, postID string, attemptID uuid.UUID) error {
 	var total, done, failed int
 	err := db.QueryRowContext(ctx, `
-		SELECT
-			COUNT(*)                                               AS total,
-			COUNT(*) FILTER (WHERE status IN ('published','failed')) AS done,
-			COUNT(*) FILTER (WHERE status = 'failed')              AS failed
-		FROM publish_results
-		WHERE post_id = $1 AND publish_attempt_id = $2
-	`, postID, attemptID).Scan(&total, &done, &failed)
+SELECT
+	COUNT(*)                                               AS total,
+	COUNT(*) FILTER (WHERE status IN ('published','failed')) AS done,
+	COUNT(*) FILTER (WHERE status = 'failed')              AS failed
+FROM publish_results
+WHERE post_id = $1 AND publish_attempt_id = $2
+`, postID, attemptID).Scan(&total, &done, &failed)
 	if err != nil {
 		return fmt.Errorf("check results for post %s: %w", postID, err)
 	}
+
 	if total == 0 {
 		return nil
 	}
 	if total != done {
 		return nil
 	}
+
 	if failed > 0 {
-		var reason string
-		_ = db.QueryRowContext(ctx, `
-			SELECT fail_reason FROM publish_results
-			WHERE post_id=$1 AND status='failed' LIMIT 1
-		`, postID).Scan(&reason)
+    var reason string
+    _ = db.QueryRowContext(ctx, `
+    SELECT fail_reason FROM publish_results
+    WHERE post_id=$1 AND publish_attempt_id=$2 AND status='failed' LIMIT 1
+    `, postID, attemptID).Scan(&reason)
 
-		var retryCount, maxRetries int
-		pErr := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
-		// Inside FinalizePostStatus, replace the retry block:
-		if pErr == nil && retryCount < maxRetries {
-			newAttemptID := uuid.New()
-			newRetryCount := retryCount + 1
-
-			// 🆕 Exponential backoff: 10s, 20s, 40s... capped at 5 minutes
-			delay := time.Duration(math.Pow(2, float64(newRetryCount-1))) * 10 * time.Second
-			if delay > 5*time.Minute {
-				delay = 5 * time.Minute
-			}
-			score := float64(time.Now().Add(delay).Unix())
-
-			log.Printf("🔄 [Scheduler] Scheduling retry for post %s (attempt %d/%d) in %v after platform failure: %s", postID, newRetryCount, maxRetries, delay, reason)
-
-			_, updateErr := db.ExecContext(ctx, `
-UPDATE posts
-SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
-WHERE id = $4
-`, newRetryCount, newAttemptID, reason, postID)
-			if updateErr != nil {
-				return updateErr
-			}
-
-			// 🆕 Add to Redis sorted set for delayed retry (replaces immediate LPUSH)
-			if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
-				Score:  score,
-				Member: postID,
-			}).Err(); zaddErr != nil {
-				log.Printf("⚠️  [Scheduler] Failed to schedule retry for post %s: %v", postID, zaddErr)
-			}
+		scheduled, schedErr := scheduleRetry(ctx, db, postID, reason)
+		if schedErr != nil {
+			return schedErr
+		}
+		if scheduled {
 			return nil
 		}
 
+		// Max retries exceeded, mark as permanently failed
 		_, err = db.ExecContext(ctx, `
-			UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW()
-			WHERE id=$2
-		`, reason, postID)
+UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW()
+WHERE id=$2
+`, reason, postID)
 		return err
 	}
+
 	_, err = db.ExecContext(ctx, `
-		UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW()
-		WHERE id=$1
-	`, postID)
+UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW()
+WHERE id=$1
+`, postID)
 	return err
 }

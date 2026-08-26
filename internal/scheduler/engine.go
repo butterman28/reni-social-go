@@ -62,35 +62,62 @@ func StartPoller(db *sql.DB) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
+// internal/scheduler/engine.go
+
+// ...
+
 func pollAndEnqueue(db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Use a CTE to atomically find + update due posts in one round-trip.
-	// This prevents two pollers from picking up the same post if ever
-	// run in parallel (e.g. during a rolling deploy).
-	query := `
-		WITH due AS (
-			SELECT id FROM posts
-			WHERE status = 'scheduled'
-			AND scheduled_at <= NOW()
-			FOR UPDATE SKIP LOCKED
-		)
-		UPDATE posts
-		SET status = 'publishing', 
-			updated_at = NOW(),
-			current_publish_attempt_id = gen_random_uuid() --  GENERATE IT HERE
-		FROM due
-		WHERE posts.id = due.id
-		RETURNING posts.id::text
-	`
-
-	rows, err := db.QueryContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("poll query: %w", err)
+	zombieTimeoutMins := config.C.ZombiePostTimeoutMinutes
+	if zombieTimeoutMins <= 0 {
+		zombieTimeoutMins = 15 // Fallback
 	}
-	defer rows.Close()
 
+	// UPDATED QUERY: Now includes zombie detection, but EXCLUDES posts that are
+	// legitimately waiting on async platform processing (e.g. IG video containers).
+	// Without this exclusion, a long-running IG video (>15m) would be incorrectly
+	// flagged as a zombie, re-enqueued, and result in duplicate IG posts.
+	query := `
+WITH due AS (
+    SELECT id, status FROM posts
+    WHERE (
+        -- 1. Normal scheduled posts
+        (status = 'scheduled' AND scheduled_at <= NOW())
+        OR
+        -- 2. Zombie recovery: posts stuck in 'publishing' for too long
+        -- BUT exclude posts that have active 'processing' results (e.g. IG video containers)
+        (status = 'publishing' 
+         AND updated_at < NOW() - ($1 || ' minutes')::INTERVAL
+         AND NOT EXISTS (
+             SELECT 1 FROM publish_results pr 
+             WHERE pr.post_id = posts.id AND pr.status = 'processing'
+         )
+        )
+    )
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE posts
+SET status = 'publishing',
+    updated_at = NOW(),
+    current_publish_attempt_id = gen_random_uuid(),
+    -- Increment retry_count ONLY for zombies to prevent infinite crash loops
+    retry_count = CASE
+        WHEN due.status = 'publishing' THEN posts.retry_count + 1
+        ELSE posts.retry_count
+    END
+FROM due
+WHERE posts.id = due.id
+RETURNING posts.id::text
+`
+
+	rows, err := db.QueryContext(ctx, query, zombieTimeoutMins)
+    // ...
+    if err != nil {
+        return fmt.Errorf("poll query: %w", err)
+    }
+    defer rows.Close()
 	var enqueued int
 	for rows.Next() {
 		var postID string

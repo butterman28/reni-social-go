@@ -33,13 +33,35 @@ type CreatePostRequest struct {
 	ScheduledAt  *time.Time        `json:"scheduled_at"`   // nil = draft
 }
 
+
+// NullableTime allows distinguishing between a missing JSON key and an explicit `null`.
+type NullableTime struct {
+	Time  *time.Time
+	IsSet bool
+}
+
+// UnmarshalJSON implements json.Unmarshaler to detect explicit nulls.
+func (n *NullableTime) UnmarshalJSON(data []byte) error {
+	n.IsSet = true
+	if string(data) == "null" {
+		n.Time = nil
+		return nil
+	}
+	var t time.Time
+	if err := json.Unmarshal(data, &t); err != nil {
+		return err
+	}
+	n.Time = &t
+	return nil
+}
+
 type UpdatePostRequest struct {
-	Content      *string           `json:"content"`
-	MediaURLs    []string          `json:"media_urls"`
-	Platforms    []domain.Platform `json:"platforms"`
-	ArticleURL   *string           `json:"article_url"`
-	ArticleTitle *string           `json:"article_title"`
-	ScheduledAt  *time.Time        `json:"scheduled_at"`
+	Content      *string            `json:"content"`
+	MediaURLs    []string           `json:"media_urls"`
+	Platforms    *[]domain.Platform `json:"platforms"`
+	ArticleURL   *string            `json:"article_url"`
+	ArticleTitle *string            `json:"article_title"`
+	ScheduledAt  *NullableTime      `json:"scheduled_at"`
 }
 
 type PostFilter struct {
@@ -148,20 +170,7 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 		return nil, fmt.Errorf("create post: %w", err)
 	}
 
-	return &domain.Post{
-		ID:           postID,
-		WorkspaceID:  workspaceID,
-		AuthorID:     authorUUID,
-		Content:      req.Content,
-		MediaURLs:    req.MediaURLs,
-		Platforms:    req.Platforms,
-		ArticleURL:   req.ArticleURL,
-		ArticleTitle: req.ArticleTitle,
-		Status:       status,
-		ScheduledAt:  req.ScheduledAt,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}, nil
+	return GetPost(ctx, postID.String(), workspaceID.String())
 }
 
 // GetPost fetches a single post scoped to a workspace.
@@ -268,6 +277,7 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 	if err != nil {
 		return nil, err
 	}
+
 	if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
 		return nil, fmt.Errorf("cannot edit a post that has already been published")
 	}
@@ -278,24 +288,43 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 	if req.MediaURLs != nil {
 		existing.MediaURLs = req.MediaURLs
 	}
+	
+	// FIX: Only update platforms if the pointer is not nil
 	if req.Platforms != nil {
-		existing.Platforms = req.Platforms
-	}
+    if len(*req.Platforms) == 0 {
+        return nil, fmt.Errorf("platforms cannot be empty")
+    }
+    existing.Platforms = *req.Platforms
+}
+
 	if req.ArticleURL != nil {
 		existing.ArticleURL = *req.ArticleURL
 	}
 	if req.ArticleTitle != nil {
 		existing.ArticleTitle = *req.ArticleTitle
 	}
-	if req.ScheduledAt != nil {
-		existing.ScheduledAt = req.ScheduledAt
-		existing.Status = domain.StatusScheduled
+
+	if req.ScheduledAt != nil && req.ScheduledAt.IsSet {
+		if req.ScheduledAt.Time == nil {
+			// Explicit null means unschedule (revert to draft)
+			existing.ScheduledAt = nil
+			if existing.Status == domain.StatusScheduled {
+				existing.Status = domain.StatusDraft
+			}
+		} else {
+			if req.ScheduledAt.Time.Before(time.Now()) {
+				return nil, fmt.Errorf("scheduled_at must be in the future")
+			}
+			existing.ScheduledAt = req.ScheduledAt.Time
+			existing.Status = domain.StatusScheduled
+		}
 	}
-	//Determine final state and validate for article shares
+
+	// Determine final state and validate for article shares
 	finalPlatforms := existing.Platforms
-	if req.Platforms != nil {
-		finalPlatforms = req.Platforms
-	}
+	// Note: If req.Platforms was nil, we keep existing.Platforms. 
+	// If it was non-nil (even if empty), we use the new value.
+	
 	finalArticleURL := existing.ArticleURL
 	if req.ArticleURL != nil {
 		finalArticleURL = *req.ArticleURL
@@ -311,11 +340,11 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 	platformJSON, _ := json.Marshal(existing.Platforms)
 
 	_, err = db.DB.ExecContext(ctx, `
-		UPDATE posts SET
-			content=$1, media_urls=$2::jsonb, platforms=$3::jsonb,
-			article_url=$4, article_title=$5,
-			status=$6, scheduled_at=$7, updated_at=NOW()
-		WHERE id=$8 AND workspace_id=$9
+	UPDATE posts SET
+	content=$1, media_urls=$2::jsonb, platforms=$3::jsonb,
+	article_url=$4, article_title=$5,
+	status=$6, scheduled_at=$7, updated_at=NOW()
+	WHERE id=$8 AND workspace_id=$9
 	`, existing.Content, mediaJSON, platformJSON,
 		existing.ArticleURL, existing.ArticleTitle,
 		string(existing.Status), existing.ScheduledAt, postID, workspaceID)
@@ -367,17 +396,49 @@ func DeletePost(ctx context.Context, postID, workspaceID string) error {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
-func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time) error {
+// SchedulePost sets or updates the scheduled time for an existing post.
+// It also optionally updates the target platforms if provided.
+func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time, platforms []domain.Platform) error {
 	if scheduledAt.Before(time.Now()) {
 		return fmt.Errorf("scheduled_at must be in the future")
 	}
+
+	// FIX: Check length instead of nil-ness for the slice passed from the handler
+	if len(platforms) > 0 {
+		existing, err := GetPost(ctx, postID, workspaceID)
+		if err != nil {
+			return err
+		}
+		if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
+			return fmt.Errorf("cannot edit a post that has already been published")
+		}
+		existing.Platforms = platforms
+		existing.ScheduledAt = &scheduledAt
+		existing.Status = domain.StatusScheduled
+
+		if existing.ArticleURL != "" {
+			if err := validateArticlePlatforms(existing.Platforms); err != nil {
+				return err
+			}
+		}
+
+		platformJSON, _ := json.Marshal(existing.Platforms)
+		_, err = db.DB.ExecContext(ctx, `
+			UPDATE posts
+			SET status=$1, scheduled_at=$2, platforms=$3::jsonb, updated_at=NOW()
+			WHERE id=$4 AND workspace_id=$5
+		`, string(existing.Status), existing.ScheduledAt, platformJSON, postID, workspaceID)
+		return err
+	}
+
+	// Fallback: If no platforms were sent (empty slice), just update the time
+	// Include 'failed' so users can reschedule posts that previously failed to publish.
 	_, err := db.DB.ExecContext(ctx, `
 		UPDATE posts SET status='scheduled', scheduled_at=$1, updated_at=NOW()
-		WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled')
+		WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled','failed')
 	`, scheduledAt, postID, workspaceID)
 	return err
 }
-
 // PublishNow enqueues a post to Redis for asynchronous publishing by the background worker.
 // PublishNow godoc
 // @Summary PublishNow
@@ -400,17 +461,35 @@ func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, err
 		return uuid.Nil, fmt.Errorf("post is already published or being published")
 	}
 
-	// 1. Generate the Idempotency Key for this specific button click
 	attemptID := uuid.New()
 
-	_, err = db.DB.ExecContext(ctx,
-		`UPDATE posts SET status='publishing', current_publish_attempt_id=$1, updated_at=NOW() WHERE id=$2`,
-		attemptID, postID)
+	// 🔧 FIX: If the post is being manually retried after a failure,
+	// reset the retry_count and fail_reason so the worker's automatic
+	// retry logic functions correctly for this new manual attempt.
+	if post.Status == domain.StatusFailed {
+		_, err = db.DB.ExecContext(ctx,
+			`UPDATE posts SET 
+				status='publishing', 
+				current_publish_attempt_id=$1, 
+				retry_count=0, 
+				fail_reason='', 
+				updated_at=NOW() 
+			WHERE id=$2`,
+			attemptID, postID)
+	} else {
+		_, err = db.DB.ExecContext(ctx,
+			`UPDATE posts SET 
+				status='publishing', 
+				current_publish_attempt_id=$1, 
+				updated_at=NOW() 
+			WHERE id=$2`,
+			attemptID, postID)
+	}
+
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	// 2. Enqueue the post to the Redis queue for the worker to publish it asynchronously
 	if err := utils.RDB.LPush(ctx, config.C.ScheduledPostsQueue, postID).Err(); err != nil {
 		// Revert status on failure
 		_, _ = db.DB.ExecContext(ctx,

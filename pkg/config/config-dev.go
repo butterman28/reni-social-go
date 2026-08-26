@@ -25,7 +25,8 @@ func init() {
 		Port:    "1040",
 		IsDev:   true,
 		BackUrl: "localhost:1040",
-
+		
+		ZombiePostTimeoutMinutes: 15, 
 		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_dev?sslmode=disable"),
 
 		USE_TLS:   false,
@@ -46,7 +47,7 @@ func init() {
 		// LinkedIn (dev)
 		LinkedInClientID:     os.Getenv("LINKEDIN_CLIENT_ID"),
 		LinkedInClientSecret: os.Getenv("LINKEDIN_CLIENT_SECRET"),
-		LinkedInRedirectURL:  getEnv("LINKEDIN_REDIRECT_URL", "http://localhost:1040/api/workspaces/connect/linkedin/callback"),
+		LinkedInRedirectURL:  getEnv("LINKEDIN_REDIRECT_URL", "http://51.75.208.211:1045/api/workspaces/connect/linkedin/callback"),
 
 		// Meta (dev) — Facebook Login flow
 		MetaAppID:       os.Getenv("META_APP_ID"),
