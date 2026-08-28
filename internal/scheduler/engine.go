@@ -7,6 +7,10 @@
 //	its ID onto the Redis list queue. This decouples discovery from execution
 //	and prevents double-publish on worker restart.
 //
+//	Also handles fast-fail detection for instant publishes (no scheduled_at):
+//	If an instant publish is stuck in 'publishing' for > InstantPublishTimeoutMinutes,
+//	mark it as 'failed' immediately. Scheduled posts use the longer ZombiePostTimeoutMinutes.
+//
 // Stage 2 — Queue Consumer (consumer.go):
 //
 //	Blocks on BRPOP from the Redis queue, fetches the full post, fans out to
@@ -45,11 +49,14 @@ func StartPoller(db *sql.DB) {
 		if err := pollAndEnqueue(db); err != nil {
 			log.Printf("  [Poller] poll error: %v", err)
 		}
+		if err := failInstantPublishTimeouts(db); err != nil {
+			log.Printf("  [Poller] fast-fail error: %v", err)
+		}
 	}
 }
 
-// pollAndEnqueue finds all posts due for publishing, marks them as 'publishing'
-// and pushes their IDs onto the Redis queue.
+// pollAndEnqueue finds all scheduled posts due for publishing, marks them as 'publishing'
+// and pushes their IDs onto the Redis queue. It also handles zombie recovery for scheduled posts.
 // pollAndEnqueue godoc
 // @Summary pollAndEnqueue
 // @Description Auto-generated thorough documentation for pollAndEnqueue
@@ -62,10 +69,6 @@ func StartPoller(db *sql.DB) {
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
-// internal/scheduler/engine.go
-
-// ...
-
 func pollAndEnqueue(db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -75,20 +78,21 @@ func pollAndEnqueue(db *sql.DB) error {
 		zombieTimeoutMins = 15 // Fallback
 	}
 
-	// UPDATED QUERY: Now includes zombie detection, but EXCLUDES posts that are
-	// legitimately waiting on async platform processing (e.g. IG video containers).
-	// Without this exclusion, a long-running IG video (>15m) would be incorrectly
-	// flagged as a zombie, re-enqueued, and result in duplicate IG posts.
+	// UPDATED QUERY: Handles scheduled posts and zombie recovery (but NOT instant publishes).
+	// Instant publishes with timeout are handled separately by failInstantPublishTimeouts().
+	// This query excludes instant publishes by checking scheduled_at IS NOT NULL.
+	// It also excludes posts that are legitimately waiting on async platform processing (e.g. IG video containers).
 	query := `
 WITH due AS (
     SELECT id, status FROM posts
     WHERE (
-        -- 1. Normal scheduled posts
+        -- 1. Normal scheduled posts (scheduled_at IS SET)
         (status = 'scheduled' AND scheduled_at <= NOW())
         OR
-        -- 2. Zombie recovery: posts stuck in 'publishing' for too long
-        -- BUT exclude posts that have active 'processing' results (e.g. IG video containers)
+        -- 2. Zombie recovery: SCHEDULED posts stuck in 'publishing' for too long
+        -- ONLY for posts with scheduled_at (instant publishes handled separately)
         (status = 'publishing' 
+         AND scheduled_at IS NOT NULL
          AND updated_at < NOW() - ($1 || ' minutes')::INTERVAL
          AND NOT EXISTS (
              SELECT 1 FROM publish_results pr 
@@ -113,11 +117,11 @@ RETURNING posts.id::text
 `
 
 	rows, err := db.QueryContext(ctx, query, zombieTimeoutMins)
-    // ...
-    if err != nil {
-        return fmt.Errorf("poll query: %w", err)
-    }
-    defer rows.Close()
+	if err != nil {
+		return fmt.Errorf("poll query: %w", err)
+	}
+	defer rows.Close()
+
 	var enqueued int
 	for rows.Next() {
 		var postID string
@@ -140,6 +144,68 @@ RETURNING posts.id::text
 
 	if enqueued > 0 {
 		log.Printf(" [Poller] Enqueued %d post(s)", enqueued)
+	}
+
+	return rows.Err()
+}
+
+// failInstantPublishTimeouts marks instant publishes (scheduled_at IS NULL) as 'failed'
+// if they've been stuck in 'publishing' for longer than InstantPublishTimeoutMinutes.
+// This is a FAST-FAIL mechanism: instant publishes don't retry automatically,
+// so we fail them quickly to notify the user, separate from zombie recovery for scheduled posts.
+// failInstantPublishTimeouts godoc
+// @Summary failInstantPublishTimeouts
+// @Description Auto-generated thorough documentation for failInstantPublishTimeouts
+// @Tags scheduler
+// @Produce json
+// @Param db body object true "db"
+// @Success 200 {object} map[string]any "Successful operation"
+// @Failure 500 {object} map[string]string "Internal Server Error"
+func failInstantPublishTimeouts(db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	instantTimeoutMins := config.C.InstantPublishTimeoutMinutes
+	if instantTimeoutMins <= 0 {
+		instantTimeoutMins = 5 // Default: 5 minutes for instant publishes
+	}
+
+	// Find instant publishes (scheduled_at IS NULL) stuck in 'publishing' for too long
+	// Exclude posts with active 'processing' status (e.g., IG video containers)
+	query := `
+UPDATE posts
+SET status = 'failed',
+    fail_reason = 'Instant publish timeout: stuck in publishing for >' || $1::text || ' minutes',
+    updated_at = NOW()
+WHERE status = 'publishing'
+  AND scheduled_at IS NULL
+  AND updated_at < NOW() - ($1 || ' minutes')::INTERVAL
+  AND NOT EXISTS (
+      SELECT 1 FROM publish_results pr
+      WHERE pr.post_id = posts.id AND pr.status = 'processing'
+  )
+RETURNING id::text
+`
+
+	rows, err := db.QueryContext(ctx, query, instantTimeoutMins)
+	if err != nil {
+		return fmt.Errorf("instant publish timeout query: %w", err)
+	}
+	defer rows.Close()
+
+	var failed int
+	for rows.Next() {
+		var postID string
+		if err := rows.Scan(&postID); err != nil {
+			log.Printf("  [Poller] scan failed instant publish: %v", err)
+			continue
+		}
+		failed++
+		log.Printf("⏱️  [Poller] Instant publish %s timed out after %d minutes — marked as failed", postID, instantTimeoutMins)
+	}
+
+	if failed > 0 {
+		log.Printf("⏱️  [Poller] Failed %d instant publish(es) due to timeout", failed)
 	}
 
 	return rows.Err()
