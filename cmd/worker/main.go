@@ -23,6 +23,7 @@ func main() {
 	utils.InitRedis()
 
 	go supervise(scheduler.StartPoller, "Post Scheduler Poller")
+	//go supervise(scheduler.StartScheduledExecutor, "Post Scheduled Executor")
 	go supervise(scheduler.StartConsumer, "Post Queue Consumer")
 	go supervise(scheduler.StartIGContainerFinalizer, "IG Container Finalizer")
 	go supervise(media.StartMediaWorker, "Media Processing Worker")

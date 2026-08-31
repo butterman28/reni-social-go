@@ -317,14 +317,13 @@ func (c *Client) publishInstagram(ctx context.Context, post *domain.Post, conn *
 		return nil, fmt.Errorf("meta/ig: Instagram requires at least one image or video — text-only posts are not supported by the API")
 	}
 	mediaURL := post.MediaURLs[0]
-
 	containerEndpoint := fmt.Sprintf("%s/%s/media", graphBase, conn.AccountID)
 	containerPayload := map[string]any{
 		"caption":      post.Content,
 		"access_token": conn.AccessToken,
 	}
 
-	isVideo := isVideoURL(mediaURL)
+	isVideo := domain.IsVideoURL(mediaURL)
 	if isVideo {
 		containerPayload["media_type"] = "REELS"
 		containerPayload["video_url"] = mediaURL
@@ -417,25 +416,6 @@ func (c *Client) waitForContainerReady(ctx context.Context, containerID, accessT
 	return fmt.Errorf("timed out waiting for media container to finish processing")
 }
 
-// isVideoURL is a simple extension-based heuristic. domain.Post has no
-// media-type field yet, so we infer from the URL's file extension.
-// isVideoURL godoc
-// @Summary isVideoURL
-// @Description Auto-generated thorough documentation for isVideoURL
-// @Tags meta
-// @Produce json
-// @Param mediaURL body string true "mediaURL"
-// @Success 200 {boolean} bool "Successful operation"
-// @Failure 500 {object} map[string]string "Internal Server Error"
-func isVideoURL(mediaURL string) bool {
-	lower := strings.ToLower(mediaURL)
-	for _, ext := range []string{".mp4", ".mov", ".m4v", ".avi", ".webm"} {
-		if strings.HasSuffix(lower, ext) {
-			return true
-		}
-	}
-	return false
-}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Internal Helpers — Page / Instagram account resolution

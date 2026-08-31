@@ -226,6 +226,15 @@ WHERE post_id = $1 AND publish_attempt_id = $2
 	}
 
 	if total == 0 {
+		// Edge case: All platforms were skipped because they succeeded in a previous attempt.
+		var hasPublished bool
+		_ = db.QueryRowContext(ctx, `
+		SELECT EXISTS(SELECT 1 FROM publish_results WHERE post_id=$1 AND status='published')
+		`, postID).Scan(&hasPublished)
+		
+		if hasPublished {
+			_, _ = db.ExecContext(ctx, `UPDATE posts SET status='published', published_at=NOW(), updated_at=NOW() WHERE id=$1`, postID)
+		}
 		return nil
 	}
 	if total != done {

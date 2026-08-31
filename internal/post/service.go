@@ -33,7 +33,6 @@ type CreatePostRequest struct {
 	ScheduledAt  *time.Time        `json:"scheduled_at"`   // nil = draft
 }
 
-
 // NullableTime allows distinguishing between a missing JSON key and an explicit `null`.
 type NullableTime struct {
 	Time  *time.Time
@@ -70,52 +69,13 @@ type PostFilter struct {
 	Limit  int
 }
 
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Service
 // ──────────────────────────────────────────────────────────────────────────────
 
 // CreatePost persists a new post. If ScheduledAt is set, the status is "scheduled";
 // otherwise it is saved as "draft".
-
-// validateArticlePlatforms godoc
-// @Summary validateArticlePlatforms
-// @Description Auto-generated thorough documentation for validateArticlePlatforms
-// @Tags post
-// @Produce json
-// @Param platforms body array true "platforms"
-// @Success 200 {object} map[string]any "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
-func validateArticlePlatforms(platforms []domain.Platform) error {
-	// validateArticlePlatforms ensures that if an article URL is provided,
-	// the selected platforms actually support link/article shares.
-	for _, p := range platforms {
-		switch p {
-		case domain.PlatformMetaIG:
-			return fmt.Errorf("instagram does not support article/link shares (requires media)")
-		case domain.PlatformTikTok:
-			return fmt.Errorf("tiktok does not support article/link shares (requires video)")
-		}
-	}
-	return nil
-}
-
-// CreatePost godoc
-// @Summary CreatePost
-// @Description Auto-generated thorough documentation for CreatePost
-// @Tags post
-// @Produce json
-// @Param authorID body string true "authorID"
-// @Param req body string true "req"
-// @Success 200 {object} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*domain.Post, error) {
 	workspaceID, err := uuid.Parse(req.WorkspaceID)
 	if err != nil {
@@ -131,12 +91,15 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 	if len(req.Platforms) == 0 {
 		return nil, fmt.Errorf("at least one platform is required")
 	}
-	//Validate platform compatibility for article shares
-	if req.ArticleURL != "" {
-		if err := validateArticlePlatforms(req.Platforms); err != nil {
+
+	// Validate platform compatibility
+	for _, p := range req.Platforms {
+		if err := p.ValidateForPost(req.ArticleURL != "", req.MediaURLs); err != nil {
 			return nil, err
 		}
 	}
+
+
 
 	status := domain.StatusDraft
 	if req.ScheduledAt != nil {
@@ -170,28 +133,22 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 		return nil, fmt.Errorf("create post: %w", err)
 	}
 
-	return GetPost(ctx, postID.String(), workspaceID.String())
+		// Fetch the newly created post
+	post, err := GetPost(ctx, postID.String(), workspaceID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return post, nil
 }
 
 // GetPost fetches a single post scoped to a workspace.
-// GetPost godoc
-// @Summary GetPost
-// @Description Auto-generated thorough documentation for GetPost
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Success 200 {object} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, error) {
 	query := `
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
-		       article_url, article_title, current_publish_attempt_id,
-		       status, scheduled_at, published_at, fail_reason, created_at, updated_at,
-		       retry_count, max_retries
+		article_url, article_title, current_publish_attempt_id,
+		status, scheduled_at, published_at, fail_reason, created_at, updated_at,
+		retry_count, max_retries
 		FROM posts
 		WHERE id = $1 AND workspace_id = $2
 	`
@@ -200,19 +157,6 @@ func GetPost(ctx context.Context, postID, workspaceID string) (*domain.Post, err
 }
 
 // ListPosts returns paginated posts for a workspace, optionally filtered by status.
-// ListPosts godoc
-// @Summary ListPosts
-// @Description Auto-generated thorough documentation for ListPosts
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Param f body string true "f"
-// @Success 200 {array} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.Post, error) {
 	if f.Limit == 0 {
 		f.Limit = 20
@@ -221,6 +165,7 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 	if f.Limit > 100 {
 		f.Limit = 100
 	}
+
 	offset := (f.Page) * f.Limit
 	args := []any{workspaceID, f.Limit, offset}
 
@@ -232,9 +177,9 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 
 	query := fmt.Sprintf(`
 		SELECT id, workspace_id, author_id, content, media_urls, platforms,
-		       article_url, article_title, current_publish_attempt_id,
-		       status, scheduled_at, published_at, fail_reason, created_at, updated_at,
-		       retry_count, max_retries
+		article_url, article_title, current_publish_attempt_id,
+		status, scheduled_at, published_at, fail_reason, created_at, updated_at,
+		retry_count, max_retries
 		FROM posts %s
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -259,25 +204,11 @@ func ListPosts(ctx context.Context, workspaceID string, f PostFilter) ([]domain.
 
 // UpdatePost modifies a post's content, media, platforms, article fields, or schedule.
 // Only draft and scheduled posts can be updated.
-// UpdatePost godoc
-// @Summary UpdatePost
-// @Description Auto-generated thorough documentation for UpdatePost
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Param req body string true "req"
-// @Success 200 {object} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostRequest) (*domain.Post, error) {
 	existing, err := GetPost(ctx, postID, workspaceID)
 	if err != nil {
 		return nil, err
 	}
-
 	if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
 		return nil, fmt.Errorf("cannot edit a post that has already been published")
 	}
@@ -285,25 +216,26 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 	if req.Content != nil {
 		existing.Content = *req.Content
 	}
+	
+	finalMediaURLs := existing.MediaURLs
 	if req.MediaURLs != nil {
+		finalMediaURLs = req.MediaURLs
 		existing.MediaURLs = req.MediaURLs
 	}
-	
+
 	// FIX: Only update platforms if the pointer is not nil
 	if req.Platforms != nil {
-    if len(*req.Platforms) == 0 {
-        return nil, fmt.Errorf("platforms cannot be empty")
-    }
-    existing.Platforms = *req.Platforms
-}
-
+		if len(*req.Platforms) == 0 {
+			return nil, fmt.Errorf("platforms cannot be empty")
+		}
+		existing.Platforms = *req.Platforms
+	}
 	if req.ArticleURL != nil {
 		existing.ArticleURL = *req.ArticleURL
 	}
 	if req.ArticleTitle != nil {
 		existing.ArticleTitle = *req.ArticleTitle
 	}
-
 	if req.ScheduledAt != nil && req.ScheduledAt.IsSet {
 		if req.ScheduledAt.Time == nil {
 			// Explicit null means unschedule (revert to draft)
@@ -319,22 +251,20 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 			existing.Status = domain.StatusScheduled
 		}
 	}
-
-	// Determine final state and validate for article shares
-	finalPlatforms := existing.Platforms
-	// Note: If req.Platforms was nil, we keep existing.Platforms. 
-	// If it was non-nil (even if empty), we use the new value.
-	
-	finalArticleURL := existing.ArticleURL
-	if req.ArticleURL != nil {
-		finalArticleURL = *req.ArticleURL
-	}
-
-	if finalArticleURL != "" {
-		if err := validateArticlePlatforms(finalPlatforms); err != nil {
+	for _, p := range existing.Platforms {
+		if err := p.ValidateForPost(existing.ArticleURL != "", finalMediaURLs); err != nil {
 			return nil, err
 		}
 	}
+
+
+	// Determine final state and validate for article shares
+	
+
+	// Any manual edit resets the automated retry/failure state, since the
+	// user is explicitly intervening and expects a fresh publishing lifecycle.
+	existing.RetryCount = 0
+	existing.FailReason = ""
 
 	mediaJSON, _ := json.Marshal(existing.MediaURLs)
 	platformJSON, _ := json.Marshal(existing.Platforms)
@@ -343,11 +273,11 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 	UPDATE posts SET
 	content=$1, media_urls=$2::jsonb, platforms=$3::jsonb,
 	article_url=$4, article_title=$5,
-	status=$6, scheduled_at=$7, updated_at=NOW()
+	status=$6, scheduled_at=$7, retry_count=0, fail_reason='', updated_at=NOW()
 	WHERE id=$8 AND workspace_id=$9
 	`, existing.Content, mediaJSON, platformJSON,
-		existing.ArticleURL, existing.ArticleTitle,
-		string(existing.Status), existing.ScheduledAt, postID, workspaceID)
+	existing.ArticleURL, existing.ArticleTitle,
+	string(existing.Status), existing.ScheduledAt, postID, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("update post: %w", err)
 	}
@@ -356,18 +286,6 @@ func UpdatePost(ctx context.Context, postID, workspaceID string, req UpdatePostR
 }
 
 // DeletePost removes a post from the DB. Only draft/failed/scheduled posts can be deleted.
-// DeletePost godoc
-// @Summary DeletePost
-// @Description Auto-generated thorough documentation for DeletePost
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Success 200 {object} map[string]any "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func DeletePost(ctx context.Context, postID, workspaceID string) error {
 	result, err := db.DB.ExecContext(ctx,
 		`DELETE FROM posts WHERE id=$1 AND workspace_id=$2 AND status NOT IN ('publishing','published')`,
@@ -383,135 +301,107 @@ func DeletePost(ctx context.Context, postID, workspaceID string) error {
 }
 
 // SchedulePost sets or updates the scheduled time for an existing post.
-// SchedulePost godoc
-// @Summary SchedulePost
-// @Description Auto-generated thorough documentation for SchedulePost
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Param scheduledAt body string true "scheduledAt"
-// @Success 200 {object} map[string]any "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
-// SchedulePost sets or updates the scheduled time for an existing post.
-// It also optionally updates the target platforms if provided.
-func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time, platforms []domain.Platform) error {
+// platforms distinguishes three cases:
+//   - nil (field omitted from the request body): platforms are left as-is.
+//   - non-nil but empty ("platforms": []): rejected as invalid.
+//   - non-nil and populated: replaces the post's platforms.
+func SchedulePost(ctx context.Context, postID, workspaceID string, scheduledAt time.Time, platforms *[]domain.Platform) error {
 	if scheduledAt.Before(time.Now()) {
 		return fmt.Errorf("scheduled_at must be in the future")
 	}
 
-	// FIX: Check length instead of nil-ness for the slice passed from the handler
-	if len(platforms) > 0 {
-		existing, err := GetPost(ctx, postID, workspaceID)
-		if err != nil {
-			return err
+	// Fetch existing post to validate final state
+	existing, err := GetPost(ctx, postID, workspaceID)
+	if err != nil {
+		return err
+	}
+
+	if platforms != nil {
+		if len(*platforms) == 0 {
+			return fmt.Errorf("platforms cannot be empty")
 		}
 		if existing.Status == domain.StatusPublished || existing.Status == domain.StatusPublishing {
 			return fmt.Errorf("cannot edit a post that has already been published")
 		}
-		existing.Platforms = platforms
+		existing.Platforms = *platforms
+	}
+	for _, p := range existing.Platforms {
+		if err := p.ValidateForPost(existing.ArticleURL != "", existing.MediaURLs); err != nil {
+			return err
+		}
+	}
+
+	if platforms != nil {
 		existing.ScheduledAt = &scheduledAt
 		existing.Status = domain.StatusScheduled
-
-		if existing.ArticleURL != "" {
-			if err := validateArticlePlatforms(existing.Platforms); err != nil {
-				return err
-			}
-		}
-
+		
 		platformJSON, _ := json.Marshal(existing.Platforms)
 		_, err = db.DB.ExecContext(ctx, `
 			UPDATE posts
-			SET status=$1, scheduled_at=$2, platforms=$3::jsonb, updated_at=NOW()
+			SET status=$1, scheduled_at=$2, platforms=$3::jsonb, retry_count=0, fail_reason='', updated_at=NOW()
 			WHERE id=$4 AND workspace_id=$5
 		`, string(existing.Status), existing.ScheduledAt, platformJSON, postID, workspaceID)
 		return err
 	}
 
-	// Fallback: If no platforms were sent (empty slice), just update the time
-	// Include 'failed' so users can reschedule posts that previously failed to publish.
-	_, err := db.DB.ExecContext(ctx, `
-		UPDATE posts SET status='scheduled', scheduled_at=$1, updated_at=NOW()
-		WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled','failed')
+		_, err = db.DB.ExecContext(ctx, `
+	UPDATE posts SET status='scheduled', scheduled_at=$1, retry_count=0, fail_reason='', updated_at=NOW()
+	WHERE id=$2 AND workspace_id=$3 AND status IN ('draft','scheduled','failed')
 	`, scheduledAt, postID, workspaceID)
-	return err
-}
-// PublishNow enqueues a post to Redis for asynchronous publishing by the background worker.
-// PublishNow godoc
-// @Summary PublishNow
-// @Description Auto-generated thorough documentation for PublishNow
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Success 200 {object} uuid.UUID "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
-func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, error) {
-	post, err := GetPost(ctx, postID, workspaceID)
 	if err != nil {
-		return uuid.Nil, err
+		return err
 	}
-	if post.Status == domain.StatusPublished || post.Status == domain.StatusPublishing {
+
+	return nil
+}
+
+// PublishNow enqueues a post to Redis for asynchronous publishing by the background worker.
+func PublishNow(ctx context.Context, postID, workspaceID string) (uuid.UUID, error) {
+	attemptID := uuid.New()
+
+	// Atomically claim the post: only transition rows that are NOT already
+	// publishing or published.
+	res, err := db.DB.ExecContext(ctx, `
+		UPDATE posts
+		SET status = 'publishing',
+			current_publish_attempt_id = $1,
+			retry_count = CASE WHEN status = 'failed' THEN 0 ELSE retry_count END,
+			fail_reason = CASE WHEN status = 'failed' THEN '' ELSE fail_reason END,
+			updated_at = NOW()
+		WHERE id = $2
+		  AND workspace_id = $3
+		  AND status NOT IN ('publishing', 'published')
+	`, attemptID, postID, workspaceID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("claim post for publish: %w", err)
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("check claim result: %w", err)
+	}
+	if n == 0 {
+		if _, getErr := GetPost(ctx, postID, workspaceID); getErr != nil {
+			return uuid.Nil, getErr // not found / access denied
+		}
 		return uuid.Nil, fmt.Errorf("post is already published or being published")
 	}
 
-	attemptID := uuid.New()
-
-	// 🔧 FIX: If the post is being manually retried after a failure,
-	// reset the retry_count and fail_reason so the worker's automatic
-	// retry logic functions correctly for this new manual attempt.
-	if post.Status == domain.StatusFailed {
-		_, err = db.DB.ExecContext(ctx,
-			`UPDATE posts SET 
-				status='publishing', 
-				current_publish_attempt_id=$1, 
-				retry_count=0, 
-				fail_reason='', 
-				updated_at=NOW() 
-			WHERE id=$2`,
-			attemptID, postID)
-	} else {
-		_, err = db.DB.ExecContext(ctx,
-			`UPDATE posts SET 
-				status='publishing', 
-				current_publish_attempt_id=$1, 
-				updated_at=NOW() 
-			WHERE id=$2`,
-			attemptID, postID)
-	}
-
-	if err != nil {
-		return uuid.Nil, err
-	}
-
 	if err := utils.RDB.LPush(ctx, config.C.ScheduledPostsQueue, postID).Err(); err != nil {
-		// Revert status on failure
+		// Revert the claim on enqueue failure so the post isn't stuck.
 		_, _ = db.DB.ExecContext(ctx,
-			`UPDATE posts SET status=$1, current_publish_attempt_id=NULL, updated_at=NOW() WHERE id=$2`,
-			post.Status, postID)
+			`UPDATE posts SET status='draft', current_publish_attempt_id=NULL, updated_at=NOW() WHERE id=$1`,
+			postID)
 		return uuid.Nil, fmt.Errorf("enqueue post: %w", err)
 	}
 
 	return attemptID, nil
 }
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-// adapterFor godoc
-// @Summary adapterFor
-// @Description Auto-generated thorough documentation for adapterFor
-// @Tags post
-// @Produce json
-// @Param p body string true "p"
-// @Success 200 {object} platform.Publisher "Successful operation"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func adapterFor(p domain.Platform) platform.Publisher {
 	switch p {
 	case domain.PlatformLinkedIn:
@@ -524,22 +414,6 @@ func adapterFor(p domain.Platform) platform.Publisher {
 	return nil
 }
 
-// loadConnections, markFailed, scanPost, scanPostRow, scanPostFromScanner...
-// (unchanged except scanPostFromScanner — see below)
-
-// loadConnections godoc
-// @Summary loadConnections
-// @Description Auto-generated thorough documentation for loadConnections
-// @Tags post
-// @Produce json
-// @Param workspaceID body string true "workspaceID"
-// @Param platforms body array true "platforms"
-// @Success 200 {object} []domain.PlatformConnection "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func loadConnections(ctx context.Context, workspaceID string, platforms []domain.Platform) ([]*domain.PlatformConnection, error) {
 	if len(platforms) == 0 {
 		return nil, nil
@@ -549,6 +423,7 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	hasLinkedIn := false
 	hasMeta := false
 	hasX := false
+
 	for _, p := range platforms {
 		switch p {
 		case domain.PlatformLinkedIn:
@@ -602,6 +477,7 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 				return nil, err
 			}
 			c.Platform = domain.Platform(platformStr)
+			
 			isRequested := false
 			for _, reqP := range platforms {
 				if reqP == c.Platform {
@@ -641,18 +517,6 @@ func loadConnections(ctx context.Context, workspaceID string, platforms []domain
 	return conns, nil
 }
 
-// markFailed godoc
-// @Summary markFailed
-// @Description Auto-generated thorough documentation for markFailed
-// @Tags post
-// @Produce json
-// @Param reason body string true "reason"
-// @Success 200 {object} map[string]any "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func markFailed(ctx context.Context, postID, reason string) error {
 	_, err := db.DB.ExecContext(ctx,
 		`UPDATE posts SET status='failed', fail_reason=$1, updated_at=NOW() WHERE id=$2`,
@@ -664,50 +528,14 @@ type scannable interface {
 	Scan(dest ...any) error
 }
 
-// scanPost godoc
-// @Summary scanPost
-// @Description Auto-generated thorough documentation for scanPost
-// @Tags post
-// @Produce json
-// @Param row body object true "row"
-// @Success 200 {object} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func scanPost(row *sql.Row) (*domain.Post, error)    { return scanPostFromScanner(row) }
-// scanPostRow godoc
-// @Summary scanPostRow
-// @Description Auto-generated thorough documentation for scanPostRow
-// @Tags post
-// @Produce json
-// @Param row body object true "row"
-// @Success 200 {object} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func scanPostRow(row *sql.Rows) (*domain.Post, error) { return scanPostFromScanner(row) }
 
-// scanPostFromScanner godoc
-// @Summary scanPostFromScanner
-// @Description Auto-generated thorough documentation for scanPostFromScanner
-// @Tags post
-// @Produce json
-// @Param s body string true "s"
-// @Success 200 {object} domain.Post "Successful operation"
-// @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
-// @Failure 403 {object} map[string]string "Forbidden"
-// @Failure 404 {object} map[string]string "Not Found"
-// @Failure 500 {object} map[string]string "Internal Server Error"
 func scanPostFromScanner(s scannable) (*domain.Post, error) {
 	var p domain.Post
 	var mediaJSON, platformJSON []byte
 	var status string
-	
+
 	// Use sql.NullString for columns that can be NULL in the DB
 	var articleURL, articleTitle, failReason, attemptIDStr sql.NullString
 
@@ -716,8 +544,8 @@ func scanPostFromScanner(s scannable) (*domain.Post, error) {
 		&mediaJSON, &platformJSON,
 		&articleURL, &articleTitle, &attemptIDStr,
 		&status,
-		&p.ScheduledAt, &p.PublishedAt, 
-		&failReason,              
+		&p.ScheduledAt, &p.PublishedAt,
+		&failReason,
 		&p.CreatedAt, &p.UpdatedAt,
 		&p.RetryCount, &p.MaxRetries,
 	)
@@ -727,7 +555,7 @@ func scanPostFromScanner(s scannable) (*domain.Post, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Parse the attempt ID safely
 	if attemptIDStr.Valid {
 		parsed, _ := uuid.Parse(attemptIDStr.String)

@@ -331,11 +331,12 @@ func TestIsVideoURL(t *testing.T) {
 		"https://example.com/no-ext":    false,
 	}
 	for input, want := range cases {
-		if got := isVideoURL(input); got != want {
-			t.Errorf("isVideoURL(%q) = %v, want %v", input, got, want)
+		if got := domain.IsVideoURL(input); got != want {
+			t.Errorf("IsVideoURL(%q) = %v, want %v", input, got, want)
 		}
 	}
 }
+
 
 // ── fetchPages ────────────────────────────────────────────────────────
 func TestFetchPages(t *testing.T) {

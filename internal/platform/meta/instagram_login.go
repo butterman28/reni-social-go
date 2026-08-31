@@ -247,17 +247,15 @@ func (c *Client) PublishInstagramLogin(ctx context.Context, post *domain.Post, c
 	if len(post.MediaURLs) == 0 {
 		return nil, fmt.Errorf("instagram-login: Instagram requires at least one image or video — text-only posts are not supported by the API")
 	}
-
 	mediaURL := post.MediaURLs[0]
 	base := fmt.Sprintf("%s/%s", instagramGraphBase, instagramAPIVersion)
 	containerEndpoint := fmt.Sprintf("%s/%s/media", base, conn.AccountID)
-
 	containerPayload := map[string]any{
 		"caption":      post.Content,
 		"access_token": conn.AccessToken,
 	}
 
-	isVideo := isVideoURL(mediaURL)
+	isVideo := domain.IsVideoURL(mediaURL)
 	if isVideo {
 		containerPayload["media_type"] = "REELS"
 		containerPayload["video_url"] = mediaURL

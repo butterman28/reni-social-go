@@ -64,43 +64,69 @@ func finalizeIGContainers(db *sql.DB) error {
 	defer cancel()
 
 	// ── STEP 1: Kill stuck containers older than 1 hour ──
-	_, err := db.ExecContext(ctx, `
-	UPDATE publish_results
-	SET status = 'failed',
-	    fail_reason = 'Instagram container timed out after 1 hour of processing',
-	    updated_at = NOW(),
-	    claimed_at = NULL
-	WHERE platform = 'meta_ig'
-	  AND status = 'processing'
-	  AND container_id IS NOT NULL
-	  AND created_at < NOW() - INTERVAL '1 hour'
+	// We use a CTE with RETURNING to capture the post_id and attempt_id of the 
+	// timed-out containers so we can properly finalize the parent posts.
+	rows, err := db.QueryContext(ctx, `
+		WITH timed_out AS (
+			SELECT id, post_id, publish_attempt_id
+			FROM publish_results
+			WHERE platform = 'meta_ig'
+			  AND status = 'processing'
+			  AND container_id IS NOT NULL
+			  AND created_at < NOW() - INTERVAL '1 hour'
+		)
+		UPDATE publish_results pr
+		SET status = 'failed',
+		    fail_reason = 'Instagram container timed out after 1 hour of processing',
+		    updated_at = NOW(),
+		    claimed_at = NULL
+		FROM timed_out t
+		WHERE pr.id = t.id
+		RETURNING t.post_id::text, t.publish_attempt_id::text
 	`)
 	if err != nil {
 		return fmt.Errorf("cleanup stuck containers: %w", err)
 	}
+	defer rows.Close()
+
+	type timedOutPost struct {
+		postID    string
+		attemptID uuid.UUID
+	}
+	var timedOutPosts []timedOutPost
+	seen := make(map[string]bool) // Prevent duplicate finalization if multiple containers timed out for the same attempt
+
+	for rows.Next() {
+		var postID, attemptStr string
+		if err := rows.Scan(&postID, &attemptStr); err != nil {
+			log.Printf("  [IG Finalizer] scan timed out post: %v", err)
+			continue
+		}
+		attemptID, _ := uuid.Parse(attemptStr)
+		key := postID + ":" + attemptStr
+		if !seen[key] {
+			seen[key] = true
+			timedOutPosts = append(timedOutPosts, timedOutPost{postID: postID, attemptID: attemptID})
+		}
+	}
 
 	// ── STEP 1.5: Finalize any posts whose containers just timed out ──
-	_, err = db.ExecContext(ctx, `
-	UPDATE posts SET status = 'failed',
-	    fail_reason = 'Instagram video processing timed out',
-	    updated_at = NOW()
-	WHERE id IN (
-	    SELECT DISTINCT post_id FROM publish_results
-	    WHERE platform = 'meta_ig'
-	      AND status = 'failed'
-	      AND fail_reason LIKE '%timed out%'
-	      AND updated_at > NOW() - INTERVAL '5 seconds'
-	)
-	AND status = 'publishing'
-	`)
-	if err != nil {
-		log.Printf("  [IG Finalizer] error finalizing timed out parent posts: %v", err)
+	// Instead of hard-failing the post, we call FinalizePostStatus. This ensures:
+	// 1. If other platforms (e.g., LinkedIn) are still processing, the post isn't prematurely failed.
+	// 2. If all platforms are done, the retry logic (scheduleRetry) is respected.
+	// 3. The post is only marked 'failed' if retries are exhausted.
+	for _, tp := range timedOutPosts {
+		finalizeCtx, finalizeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := FinalizePostStatus(finalizeCtx, db, tp.postID, tp.attemptID); err != nil {
+			log.Printf("  [IG Finalizer] error finalizing timed out post %s (attempt %s): %v", tp.postID, tp.attemptID, err)
+		}
+		finalizeCancel()
 	}
 
 	// ── STEP 2: Claim pending containers atomically ──
 	const staleClaimSecs = 120 // 2 min — well above the 5s poll interval
 
-	rows, err := db.QueryContext(ctx, `
+	rows, err = db.QueryContext(ctx, `
 		WITH candidates AS (
 			SELECT id
 			FROM publish_results

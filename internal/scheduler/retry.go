@@ -82,20 +82,34 @@ func scheduleRetry(ctx context.Context, db *sql.DB, postID, reason string) (bool
 
 	log.Printf("🔄 [Scheduler] Scheduling retry for post %s (attempt %d/%d) in %v due to error: %s", postID, newRetryCount, maxRetries, delay, reason)
 
+	// Enqueue FIRST. If this fails, bail out without touching the post row —
+	// it stays exactly as it was (still 'publishing' from the current
+	// attempt), which the zombie poller will safely rescue after its
+	// timeout. That's strictly better than committing a fresh attempt_id
+	// that nothing in Redis points to.
+	if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
+		Score:  score,
+		Member: postID,
+	}).Err(); zaddErr != nil {
+		return false, fmt.Errorf("schedule retry enqueue: %w", zaddErr)
+	}
+
+	// Only commit the retry bookkeeping once we know the retry is actually
+	// queued.
 	_, updateErr := db.ExecContext(ctx, `
 		UPDATE posts
 		SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
 		WHERE id = $4
 	`, newRetryCount, newAttemptID, reason, postID)
 	if updateErr != nil {
+		// Redis now holds a retry entry pointing at bookkeeping we failed to
+		// commit. Best-effort remove it so it doesn't fire against a stale
+		// attempt_id/retry_count; the caller's exhausted-retries fallback
+		// (mark permanently failed) still applies on the next pass.
+		if remErr := utils.RDB.ZRem(utils.Ctx, config.C.RetryPostsQueue, postID).Err(); remErr != nil {
+			log.Printf("⚠️  [Scheduler] Failed to roll back queued retry for post %s after DB update failure: %v", postID, remErr)
+		}
 		return false, fmt.Errorf("update post for retry: %w", updateErr)
-	}
-
-	if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
-		Score:  score,
-		Member: postID,
-	}).Err(); zaddErr != nil {
-		log.Printf("⚠️  [Scheduler] Failed to schedule retry for post %s: %v", postID, zaddErr)
 	}
 
 	return true, nil
