@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
+	"reni-social/internal/billing"
 	"reni-social/internal/domain"
 	"reni-social/internal/platform"
 	"reni-social/internal/platform/linkedin"
@@ -99,9 +101,8 @@ func publishPost(db *sql.DB, postID string) {
 		}
 	}
 
-	perPlatformTimeout := time.Duration(config.C.PublishTimeoutMinutes) * time.Minute
-
-	var wg sync.WaitGroup
+	perPlatformTimeout := calculatePublishTimeout(dbCtx, post.MediaURLs)
+var wg sync.WaitGroup
 
 	// Check platforms that have already succeeded or are actively processing
 	// across previous attempts to avoid duplicate posts (e.g. IG video containers).
@@ -139,12 +140,23 @@ func publishPost(db *sql.DB, postID string) {
 			// Each platform gets its OWN context with its OWN timeout
 			platCtx, platCancel := context.WithTimeout(context.Background(), perPlatformTimeout)
 			defer platCancel()
-
-			result, pubErr := adapter.Publish(platCtx, post, conn)
-
-			// Use a fresh background context for DB writes so they complete
-			// even if platCtx just expired
+			//result, pubErr := adapter.Publish(platCtx, post, conn)
 			writeCtx := context.Background()
+
+			//CHECK & DEDUCT CREDITS FOR X API
+			if conn.Platform == domain.PlatformX {
+				cost := config.C.XPostCreditCost // e.g., 5 credits per tweet
+				err := billing.DeductCredits(writeCtx, post.AuthorID.String(), cost, "x_post_publish", attemptID.String())
+				if err != nil {
+					log.Printf(" [Consumer] %s publish blocked for post %s: %v", conn.Platform, postID, err)
+					_ = InsertPublishResult(writeCtx, db, postID, attemptID, string(conn.Platform), conn.ID,
+						ResultFailed, "", "", "", "Insufficient X API credits. Please top up your wallet.")
+					return
+				}
+			}
+
+			// Proceed with actual X API call
+			result, pubErr := adapter.Publish(platCtx, post, conn)
 
 			if pubErr != nil {
 				log.Printf(" [Consumer] %s publish error for post %s: %v", conn.Platform, postID, pubErr)
@@ -379,6 +391,44 @@ func markPostFailed(ctx context.Context, db *sql.DB, postID, reason string) erro
 	return err
 }
 
+
+// calculatePublishTimeout checks media URLs to determine the appropriate timeout.
+// Small videos get the base timeout; large videos get an extended timeout.
+func calculatePublishTimeout(ctx context.Context, mediaURLs []string) time.Duration {
+    baseTimeout := time.Duration(config.C.PublishTimeoutMinutes) * time.Minute
+    videoTimeout := 20 * time.Minute
+    sizeThreshold := int64(20 * 1024 * 1024) // 20 MB
+
+    for _, u := range mediaURLs {
+        if domain.IsVideoURL(u) {
+            // Quick HEAD request to check file size (3s timeout)
+            headCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+            req, _ := http.NewRequestWithContext(headCtx, http.MethodHead, u, nil)
+            
+            resp, err := http.DefaultClient.Do(req)
+            cancel()
+            
+            if err == nil && resp.StatusCode == http.StatusOK {
+                resp.Body.Close()
+                // If the server tells us the size, use it to decide
+                if resp.ContentLength > 0 {
+                    if resp.ContentLength > sizeThreshold {
+                        log.Printf("🎥 [Consumer] Video is large (%.2f MB) — extending timeout to 20m", float64(resp.ContentLength)/(1024*1024))
+                        return videoTimeout
+                    }
+                    log.Printf("🎥 [Consumer] Video is small (%.2f MB) — using base timeout", float64(resp.ContentLength)/(1024*1024))
+                    return baseTimeout
+                }
+            }
+            
+            // If HEAD fails or server doesn't send Content-Length, fallback to safe video timeout
+            log.Printf("⚠️ [Consumer] Could not determine video size for %s — defaulting to 20m timeout", u)
+            return videoTimeout
+        }
+    }
+    
+    return baseTimeout
+}
 // ──────────────────────────────────────────────────────────────────────────────
 // Platform adapter factory
 // ──────────────────────────────────────────────────────────────────────────────

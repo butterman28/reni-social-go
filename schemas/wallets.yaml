@@ -1,0 +1,29 @@
+table: wallets
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  user_id:
+    type: uuid
+    not_null: true
+    references:
+      table: users
+      column: id
+      on_delete: cascade
+  balance:
+    type: integer
+    not_null: true
+    default: 0 # Stored in credit units (e.g., 100 credits = $1)
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+  updated_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+indexes:
+  - name: idx_wallets_user_id
+    columns: [user_id]
+    unique: true

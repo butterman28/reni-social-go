@@ -3,13 +3,15 @@
 
 package config
 
+import "os"
+
 func init() {
 	prodBackURL := "https://srv.fireswitch.ng:1046"
 	C = &Config{
 		Port:    "1046",
 		IsDev:   false,
 		BackUrl: "https://srv.fireswitch.ng:1046",
-		ZombiePostTimeoutMinutes: 15, 
+		ZombiePostTimeoutMinutes: 25, 
 		DBURL: getEnv("DBURL", "postgres://renisocial:renisocial@0852@127.0.0.1:5432/renisocial_live?sslmode=disable"),
 
 		USE_TLS:   true,
@@ -44,11 +46,12 @@ func init() {
 		XRedirectURL:       "https://srv.fireswitch.ng:1046/api/workspaces/connect/x/callback",
 
 		// Scheduler
-		SchedulerPollIntervalSecs: 30,
+		SchedulerPollIntervalSecs: 5,
 		ScheduledPostsQueue:       "social:post_queue",
 		RetryPostsQueue:           "social:post_retry_queue",
 		MaxConcurrentPublishes:    25,
 		PublishTimeoutMinutes:     5,
+		InstantPublishTimeoutMinutes: 5,
 
 		// Media worker
 		MediaWorkerQueue: "social:media_jobs",
@@ -65,5 +68,7 @@ func init() {
 		LinkedInExpiryCheckIntervalHours: 6,
 		LinkedInExpiryWarnBeforeDays:     7,
 		LinkedInExpiryBatchSize:          50,    
+
+		TokenEncryptionKey: os.Getenv("TOKEN_ENCRYPTION_KEY"),
 	}
 }

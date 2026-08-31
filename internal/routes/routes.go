@@ -2,6 +2,7 @@ package routes
 
 import (
 	"reni-social/internal/auth"
+	"reni-social/internal/billing"
 	"reni-social/internal/middleware"
 	"reni-social/internal/post"
 	"reni-social/internal/workspace"
@@ -33,6 +34,7 @@ func Setup(app *fiber.App) {
 	authGroup.Post("/register/email/activate", auth.ActivateEmailHandler)
 	authGroup.Post("/register/complete", auth.CompleteRegisterHandler)
 	authGroup.Post("/signin", auth.SigninHandler)
+	app.Post("/api/webhooks/payment", billing.PaymentWebhook)
 
 	// ──────────────────────────────────────────────────────
 	// 2. AUTHENTICATED & PROTECTED ROUTES

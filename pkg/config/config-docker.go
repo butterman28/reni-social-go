@@ -24,7 +24,7 @@ func init() {
 		Port:    "1040",
 		IsDev:   true,
 		BackUrl: "localhost:1040",
-		ZombiePostTimeoutMinutes: 15, 
+		ZombiePostTimeoutMinutes: 25, 
 		DBURL: getEnv("DBURL", "postgres://reni:reni@postgres:5432/reni_social_dev?sslmode=disable"),
 
 		USE_TLS:   false,
@@ -69,7 +69,7 @@ func init() {
 		TikTokClientSecret: os.Getenv("TIKTOK_CLIENT_SECRET"),
 		TikTokRedirectURL:  os.Getenv("TIKTOK_REDIRECT_URL"),
 
-		SchedulerPollIntervalSecs: 30,
+		SchedulerPollIntervalSecs: 5,
 		ScheduledPostsQueue:       "social:post_queue_dev",
 		RetryPostsQueue:           "social:post_retry_queue_dev",
 		MaxConcurrentPublishes:    25,
@@ -88,5 +88,8 @@ func init() {
 		LinkedInExpiryCheckIntervalHours: 6,
 		LinkedInExpiryWarnBeforeDays:     7,
 		LinkedInExpiryBatchSize:          50, 
+		InstantPublishTimeoutMinutes: 5,
+
+		TokenEncryptionKey: os.Getenv("TOKEN_ENCRYPTION_KEY"),
 	}
 }

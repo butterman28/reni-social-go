@@ -94,8 +94,16 @@ type Config struct {
 	LinkedInExpiryCheckIntervalHours int
 	LinkedInExpiryWarnBeforeDays     int
 	LinkedInExpiryBatchSize          int
+	InstantPublishTimeoutMinutes     int
 
-	ZombiePostTimeoutMinutes int // How long before a 'publishing' post is considered a zombie
+
+	ZombiePostTimeoutMinutes int
+	PaystackSecretKey string `env:"PAYSTACK_SECRET_KEY"`
+    StripeWebhookSecret string `env:"STRIPE_WEBHOOK_SECRET"`
+	XPostCreditCost int    `env:"X_POST_CREDIT_COST" envDefault:"5"` 
+    XReadCreditCost int    `env:"X_READ_CREDIT_COST" envDefault:"1"`
+
+	TokenEncryptionKey string `env:"TOKEN_ENCRYPTION_KEY"`
 
 }
 

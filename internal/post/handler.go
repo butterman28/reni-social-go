@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"time"
 
+	"reni-social/internal/billing"
 	"reni-social/internal/domain"
 	"reni-social/internal/scheduler"
 	"reni-social/internal/workspace"
+	"reni-social/pkg/config"
 	"reni-social/pkg/db"
 
 	"github.com/gofiber/fiber/v2"
@@ -184,19 +186,19 @@ func Delete(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "post deleted"})
 }
 
-// Publish handles POST /api/posts/:id/publish
+// Publish handles POST /api/in/posts/in/:id/publish
 // Publish godoc
 // @Summary Publish
-// @Description Auto-generated thorough documentation for Publish
+// @Description Triggers asynchronous publishing. Checks wallet balance if X is selected.
 // @Tags post
 // @Produce json
 // @Security BearerAuth
 // @Security SessionId
 // @Param id path string true "id"
 // @Router /api/in/posts/in/{id}/publish [post]
-// @Success 201 {object} map[string]any "Successful operation"
+// @Success 200 {object} map[string]any "Successful operation"
 // @Failure 400 {object} map[string]string "Bad Request"
-// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 402 {object} map[string]any "Payment Required" // 🆕 Added for clarity
 // @Failure 403 {object} map[string]string "Forbidden"
 // @Failure 404 {object} map[string]string "Not Found"
 // @Failure 500 {object} map[string]string "Internal Server Error"
@@ -207,21 +209,54 @@ func Publish(c *fiber.Ctx) error {
 	if workspaceID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "workspace_id is required"})
 	}
-	
+
 	// 🔒 AUTHORIZATION CHECK
 	if _, err := workspace.GetWorkspace(c.Context(), workspaceID, userID); err != nil {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "access denied to workspace"})
 	}
 
-	// Call the updated service that returns the attemptID
+	// Fetch post to check platforms and author ID
+	post, err := GetPost(c.Context(), postID, workspaceID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// 🚨 NEW: Pre-flight check for X API credits
+	hasXPlatform := false
+	for _, p := range post.Platforms {
+		if p == domain.PlatformX {
+			hasXPlatform = true
+			break
+		}
+	}
+
+	if hasXPlatform {
+		balance, err := billing.GetWalletBalance(c.Context(), post.AuthorID.String())
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "failed to verify wallet balance",
+			})
+		}
+
+		if balance < config.C.XPostCreditCost {
+			return c.Status(fiber.StatusPaymentRequired).JSON(fiber.Map{
+				"error":           "Insufficient X API credits. Please top up your wallet to publish to X.",
+				"current_balance": balance,
+				"required":        config.C.XPostCreditCost,
+			})
+		}
+	}
+
+	// Call the service that enqueues to Redis and returns the attemptID
 	attemptID, err := PublishNow(c.Context(), postID, workspaceID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-	//Tell the frontend to start tracking this specific attempt
-	return c.JSON(fiber.Map{
+
+	// Tell the frontend to start tracking this specific attempt
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message":    "publishing_initiated",
-		"attempt_id": attemptID,
+		"attempt_id": attemptID.String(), // Ensure UUID is converted to string for JSON
 	})
 }
 

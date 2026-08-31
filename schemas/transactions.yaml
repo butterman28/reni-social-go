@@ -1,0 +1,32 @@
+table: transactions
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  user_id:
+    type: uuid
+    not_null: true
+  amount:
+    type: integer
+    not_null: true # Positive for top-ups, negative for deductions
+  type:
+    type: varchar(50)
+    not_null: true # 'top_up', 'x_post_publish', 'x_read'
+  reference:
+    type: varchar(255)
+    not_null: false # Gateway reference or attempt_id
+  status:
+    type: varchar(50)
+    not_null: true
+    default: 'completed'
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+indexes:
+  - name: idx_transactions_user_id
+    columns: [user_id]
+  - name: idx_transactions_reference
+    columns: [reference]
+    unique: true
