@@ -59,13 +59,31 @@ func processReadyRetries() error {
 	log.Printf("[Retry Poller] Moved %d delayed retries to main queue", len(items))
 	return nil
 }
+
+// scheduleRetry attempts to schedule a retry for a failed post.
+// Only schedules retries if the post was originally scheduled.
+// Non-scheduled posts (instant publishes) do not get automatic retries.
+// Returns false immediately for instant publishes without touching DB unnecessarily.
 func scheduleRetry(ctx context.Context, db *sql.DB, postID, reason string) (bool, error) {
 	var retryCount, maxRetries int
-	err := db.QueryRowContext(ctx, `SELECT retry_count, max_retries FROM posts WHERE id = $1`, postID).Scan(&retryCount, &maxRetries)
+	var scheduledAt *time.Time
+
+	// Single query: fetch retry counts AND scheduled_at to determine post type
+	err := db.QueryRowContext(ctx,
+		`SELECT retry_count, max_retries, scheduled_at FROM posts WHERE id = $1`,
+		postID).Scan(&retryCount, &maxRetries, &scheduledAt)
 	if err != nil {
-		return false, fmt.Errorf("fetch retry counts: %w", err)
+		return false, fmt.Errorf("fetch post: %w", err)
 	}
 
+	// 🔒 EARLY EXIT: If it's an instant publish (no scheduled_at), don't retry
+	// This avoids any further DB writes or Redis operations
+	if scheduledAt == nil {
+		log.Printf("⏭️  [Scheduler] Post %s was instant publish (not scheduled) — no automatic retries", postID)
+		return false,nil // Return false, caller will mark as permanently failed
+	}
+
+	// Only for SCHEDULED posts: check if retries are exhausted
 	if retryCount >= maxRetries {
 		return false, nil // Max retries exceeded
 	}
@@ -80,22 +98,8 @@ func scheduleRetry(ctx context.Context, db *sql.DB, postID, reason string) (bool
 	}
 	score := float64(time.Now().Add(delay).Unix())
 
-	log.Printf("🔄 [Scheduler] Scheduling retry for post %s (attempt %d/%d) in %v due to error: %s", postID, newRetryCount, maxRetries, delay, reason)
+	log.Printf("🔄 [Scheduler] Scheduling retry for SCHEDULED post %s (attempt %d/%d) in %v due to error: %s", postID, newRetryCount, maxRetries, delay, reason)
 
-	// Enqueue FIRST. If this fails, bail out without touching the post row —
-	// it stays exactly as it was (still 'publishing' from the current
-	// attempt), which the zombie poller will safely rescue after its
-	// timeout. That's strictly better than committing a fresh attempt_id
-	// that nothing in Redis points to.
-	if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
-		Score:  score,
-		Member: postID,
-	}).Err(); zaddErr != nil {
-		return false, fmt.Errorf("schedule retry enqueue: %w", zaddErr)
-	}
-
-	// Only commit the retry bookkeeping once we know the retry is actually
-	// queued.
 	_, updateErr := db.ExecContext(ctx, `
 		UPDATE posts
 		SET retry_count = $1, status = 'publishing', current_publish_attempt_id = $2, fail_reason = $3, updated_at = NOW()
@@ -110,6 +114,13 @@ func scheduleRetry(ctx context.Context, db *sql.DB, postID, reason string) (bool
 			log.Printf("⚠️  [Scheduler] Failed to roll back queued retry for post %s after DB update failure: %v", postID, remErr)
 		}
 		return false, fmt.Errorf("update post for retry: %w", updateErr)
+	}
+
+	if zaddErr := utils.RDB.ZAdd(utils.Ctx, config.C.RetryPostsQueue, redis.Z{
+		Score:  score,
+		Member: postID,
+	}).Err(); zaddErr != nil {
+		log.Printf("⚠️  [Scheduler] Failed to schedule retry for post %s: %v", postID, zaddErr)
 	}
 
 	return true, nil
