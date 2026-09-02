@@ -509,6 +509,35 @@ Caller must be `admin`/`owner`. **Soft-deletes** (`is_deleted = true`) — it at
 ```json
 { "status": true, "message": "Platform disconnected" }
 ```
+### 3.5 Media Upload & Processing
+
+**⚠️ New Workflow:** Media is now uploaded *before* post creation. The backend processes the media asynchronously based on the selected platforms and publish intent (instant vs. scheduled), ensuring optimal formatting (e.g., 9:16 vertical for TikTok/Reels, 16:9 horizontal for LinkedIn) without blocking the user.
+
+#### `POST /api/in/media/upload`
+Uploads a media file, saves it locally, and fans out platform-specific FFmpeg processing jobs in the background.
+
+**Auth:** `Authorization` + `X-Session-Id`
+
+**Query params:**
+| Param | Required | Notes |
+|---|---|---|
+| `workspace_id` | ✅ | UUID of the workspace |
+| `priority` | optional | `high` (instant publish), `normal` (default), or `low` (scheduled/draft). Determines queue priority. |
+
+**Form Data (`multipart/form-data`):**
+| Field | Required | Notes |
+|---|---|---|
+| `file` | ✅ | The media file (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.mp4`, `.mov`, `.m4v`, `.avi`, `.webm`) |
+| `platforms` | ✅ | Comma-separated list of target platforms (e.g., `linkedin,meta_ig,tiktok`). The backend will fan out a specific transcoding job for *each* platform to ensure correct aspect ratios. |
+
+**Response (201):**
+```json
+{
+  "url": "https://api.renisocial.com/media/uploads/ws-123/abc123.mp4",
+  "filename": "abc123.mp4",
+  "size": 1048576,
+  "mime_type": "video/mp4"
+}
 
 ---
 

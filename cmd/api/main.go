@@ -79,6 +79,9 @@ func main() {
 		return c.SendStatus(fiber.StatusNoContent)
 	})
 
+	// Serve uploaded media files statically
+	app.Static("/media/uploads", "./uploads")
+
 	routes.Setup(app)
 
 	go func() {

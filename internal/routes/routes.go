@@ -4,6 +4,7 @@ import (
 	"reni-social/internal/auth"
 	"reni-social/internal/billing"
 	"reni-social/internal/middleware"
+	"reni-social/internal/media"
 	"reni-social/internal/post"
 	"reni-social/internal/workspace"
 
@@ -68,6 +69,7 @@ func Setup(app *fiber.App) {
 	in.Post("/workspaces/in/:id/connect/in/:platform", workspace.ConnectPlatform)
 	in.Delete("/workspaces/in/:id/connections/:connectionId", workspace.Disconnect)
 
+	in.Post("/media/upload", media.Upload)
 	in.Post("/posts", post.Create)
 	in.Get("/posts", post.List)
 	in.Get("/posts/in/:id", post.Get)

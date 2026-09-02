@@ -725,6 +725,67 @@
         }
       ]
     },
+        {
+      "name": "Media Upload",
+      "item": [
+        {
+          "name": "Upload Media File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{bearerToken}}"
+              },
+              {
+                "key": "X-Session-Id",
+                "value": "{{sessionId}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "platforms",
+                  "value": "linkedin,meta_ig",
+                  "type": "text",
+                  "description": "Comma-separated list of target platforms"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/in/media/upload?workspace_id={{workspaceId}}&priority=high",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "in",
+                "media",
+                "upload"
+              ],
+              "query": [
+                {
+                  "key": "workspace_id",
+                  "value": "{{workspaceId}}"
+                },
+                {
+                  "key": "priority",
+                  "value": "high",
+                  "description": "high (instant), normal (default), or low (scheduled)"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
     {
       "name": "Posts & Publishing",
       "item": [

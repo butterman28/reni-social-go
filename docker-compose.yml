@@ -39,6 +39,8 @@ services:
     command: ["./api"]
     ports:
       - "1040:1040"
+    volumes:
+      - ./uploads:/app/uploads  # <-- ADD THIS LINE
     depends_on:
       postgres:
         condition: service_healthy

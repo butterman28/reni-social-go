@@ -1,0 +1,37 @@
+# schemas/media_assets.yaml
+table: media_assets
+columns:
+  id:
+    type: uuid
+    primary_key: true
+    not_null: true
+  post_id:
+    type: uuid
+    not_null: true
+    references:
+      table: posts
+      column: id
+      on_delete: cascade
+  platform:
+    type: varchar(50)
+    not_null: true
+  original_url:
+    type: text
+    not_null: true
+  processed_url:
+    type: text
+    not_null: true
+  status:
+    type: varchar(20)
+    not_null: true
+    default: "'processing'" # 'processing', 'completed', 'failed'
+  created_at:
+    type: timestamptz
+    not_null: true
+    default: now()
+
+indexes:
+  - name: idx_media_assets_post_id
+    columns: [post_id]
+  - name: idx_media_assets_platform_status
+    columns: [platform, status]
