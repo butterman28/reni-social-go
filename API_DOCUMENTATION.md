@@ -529,11 +529,13 @@ Uploads a media file, saves it locally, and fans out platform-specific FFmpeg pr
 |---|---|---|
 | `file` | ✅ | The media file (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.mp4`, `.mov`, `.m4v`, `.avi`, `.webm`) |
 | `platforms` | ✅ | Comma-separated list of target platforms (e.g., `linkedin,meta_ig,tiktok`). The backend will fan out a specific transcoding job for *each* platform to ensure correct aspect ratios. |
+| `media_ids` | ✅ | Comma-separated list of frontend-generated UUIDs (one for each platform). E.g., `uuid-1,uuid-2`. |
 
 **Response (201):**
 ```json
 {
   "url": "https://api.renisocial.com/media/uploads/ws-123/abc123.mp4",
+  "media_ids": ["uuid-1", "uuid-2"],
   "filename": "abc123.mp4",
   "size": 1048576,
   "mime_type": "video/mp4"
@@ -559,6 +561,7 @@ Create a draft or scheduled post.
 {
   "workspace_id": "8b2e...-uuid",
   "content": "Hello world from Reni Social! 🚀",
+  "media_ids": ["uuid-1", "uuid-2"],
   "media_urls": [],
   "platforms": ["linkedin", "x"],
   "article_url": "",
@@ -567,6 +570,7 @@ Create a draft or scheduled post.
 }
 ```
 - `platforms` values: `linkedin`, `meta_ig`, `meta_fb`, `x`, `tiktok`
+- `media_ids`: Array of frontend-generated UUIDs returned from the `/api/in/media/upload` endpoint. The backend uses these to link the pre-processed media to the post.
 - `scheduled_at`: ISO 8601 string in the future → status becomes `scheduled`; `null` → `draft`
 - Every platform in `platforms` is validated against the post's content via `Platform.ValidateForPost`:
   - `article_url` non-empty is rejected (400) for any platform that doesn't support link/article shares (`meta_ig`, `tiktok`) — `linkedin`, `meta_fb`, `x` do support it.
@@ -581,6 +585,7 @@ Create a draft or scheduled post.
     "workspace_id": "8b2e...-uuid",
     "author_id": "b3f1...-uuid",
     "content": "Hello world from Reni Social! 🚀",
+  "media_ids": ["uuid-1", "uuid-2"],
     "media_urls": [],
     "platforms": ["linkedin", "x"],
     "article_url": "",
@@ -1046,6 +1051,7 @@ HTTP status codes used across the API: `200`, `201`, `400`, `401`, `402`, `403`,
 | POST | `/api/in/posts/in/:id/publish` | full | Posts |
 | POST | `/api/in/posts/in/:id/schedule` | full | Posts |
 | GET | `/api/in/posts/in/:id/results` | full | Posts |
+| POST | `/api/in/media/upload` | full | Media |
 
 *"full" = `Authorization: Bearer <token>` + `X-Session-Id: <session>`*
 

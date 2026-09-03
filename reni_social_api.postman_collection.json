@@ -725,7 +725,7 @@
         }
       ]
     },
-        {
+    {
       "name": "Media Upload",
       "item": [
         {
@@ -755,6 +755,12 @@
                   "value": "linkedin,meta_ig",
                   "type": "text",
                   "description": "Comma-separated list of target platforms"
+                },
+                {
+                  "key": "media_ids",
+                  "value": "uuid-1,uuid-2",
+                  "type": "text",
+                  "description": "Comma-separated list of frontend-generated UUIDs (one for each platform)"
                 }
               ]
             },
@@ -823,7 +829,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"workspace_id\": \"{{workspaceId}}\",\n  \"content\": \"Hello world from Reni Social! \ud83d\ude80\",\n  \"media_urls\": [],\n  \"platforms\": [\"linkedin\", \"x\"],\n  \"article_url\": \"\",\n  \"article_title\": \"\",\n  \"scheduled_at\": null\n}"
+              "raw": "{\n  \"workspace_id\": \"{{workspaceId}}\",\n  \"content\": \"Hello world from Reni Social! 🚀\",\n  \"media_ids\": [\"uuid-1\", \"uuid-2\"],\n  \"media_urls\": [],\n  \"platforms\": [\"linkedin\", \"x\"],\n  \"article_url\": \"\",\n  \"article_title\": \"\",\n  \"scheduled_at\": null\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/in/posts",
@@ -947,7 +953,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"content\": \"Updated post content!\",\n  \"media_urls\": [],\n  \"platforms\": [\"linkedin\"]\n}"
+              "raw": "{\n  \"content\": \"Updated post content!\",\n  \"media_ids\": [\"uuid-1\", \"uuid-2\"],\"media_urls\": [],\n  \"platforms\": [\"linkedin\"]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/in/posts/in/:id?workspace_id={{workspaceId}}",

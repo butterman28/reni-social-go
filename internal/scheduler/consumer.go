@@ -156,7 +156,14 @@ var wg sync.WaitGroup
 			}
 
 			// Proceed with actual X API call
-			result, pubErr := adapter.Publish(platCtx, post, conn)
+			optimizedURLs := resolveMediaURLs(platCtx, db, post.ID, string(conn.Platform), post.MediaURLs)
+		
+		// Create a shallow copy of the post with the optimized URLs
+			postForPlatform := *post
+			postForPlatform.MediaURLs = optimizedURLs
+
+			// Proceed with actual platform API call using the optimized post
+			result, pubErr := adapter.Publish(platCtx, &postForPlatform, conn)
 
 			if pubErr != nil {
 				log.Printf(" [Consumer] %s publish error for post %s: %v", conn.Platform, postID, pubErr)
@@ -452,5 +459,48 @@ func adapterForPlatform(p domain.Platform) platform.Publisher {
 	}
 	return nil
 }
+func resolveMediaURLs(ctx context.Context, db *sql.DB, postID uuid.UUID, platform string, fallbackURLs []string) []string {
+	// 1. Try exact platform match
+	rows, err := db.QueryContext(ctx, `
+		SELECT processed_url FROM media_assets 
+		WHERE post_id = $1 AND platform = $2 AND status = 'completed' AND processed_url IS NOT NULL
+		ORDER BY created_at ASC
+	`, postID, platform)
+	
+	var optimized []string
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var procURL string
+			if err := rows.Scan(&procURL); err == nil {
+				optimized = append(optimized, procURL)
+			}
+		}
+	}
+	if len(optimized) > 0 {
+		return optimized
+	}
+	
+	// 2. Fallback to 'universal' platform assets
+	rows, err = db.QueryContext(ctx, `
+		SELECT processed_url FROM media_assets 
+		WHERE post_id = $1 AND platform = 'universal' AND status = 'completed' AND processed_url IS NOT NULL
+		ORDER BY created_at ASC
+	`, postID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var procURL string
+			if err := rows.Scan(&procURL); err == nil {
+				optimized = append(optimized, procURL)
+			}
+		}
+	}
+	if len(optimized) > 0 {
+		return optimized
+	}
 
+	// 3. Final fallback to original URLs
+	return fallbackURLs
+}
 var _ = uuid.Nil

@@ -26,6 +26,7 @@ import (
 type CreatePostRequest struct {
 	WorkspaceID  string            `json:"workspace_id"`
 	Content      string            `json:"content"`
+	MediaIDs     []string          `json:"media_ids"` 
 	MediaURLs    []string          `json:"media_urls"`
 	Platforms    []domain.Platform `json:"platforms"`
 	ArticleURL   string            `json:"article_url"`    // optional — LinkedIn article share
@@ -76,6 +77,8 @@ type PostFilter struct {
 
 // CreatePost persists a new post. If ScheduledAt is set, the status is "scheduled";
 // otherwise it is saved as "draft".
+// CreatePost persists a new post. If ScheduledAt is set, the status is "scheduled";
+// otherwise it is saved as "draft".
 func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*domain.Post, error) {
 	workspaceID, err := uuid.Parse(req.WorkspaceID)
 	if err != nil {
@@ -92,14 +95,43 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 		return nil, fmt.Errorf("at least one platform is required")
 	}
 
-	// Validate platform compatibility
+	// 1. Generate post ID early so we can link media assets to it
+	postID := uuid.New()
+	now := time.Now()
+
+	// 2. STRICTLY use frontend-provided media_ids to link assets to this new post
+	var finalMediaURLs []string
+	if len(req.MediaIDs) > 0 {
+		for _, mid := range req.MediaIDs {
+			assetID, err := uuid.Parse(mid)
+			if err != nil {
+				continue // Skip invalid, or return error depending on strictness preference
+			}
+			var originalURL string
+			
+			// Link the frontend's media asset to the newly created post_id
+			err = db.DB.QueryRowContext(ctx, `
+				UPDATE media_assets 
+				SET post_id = $1 
+				WHERE id = $2 
+				RETURNING original_url
+			`, postID, assetID).Scan(&originalURL)
+			
+			if err == nil {
+				finalMediaURLs = append(finalMediaURLs, originalURL)
+			}
+		}
+	} else {
+		// Fallback only if legacy direct URL uploads are still supported
+		finalMediaURLs = req.MediaURLs 
+	}
+
+	// 3. Validate platform compatibility using the resolved URLs
 	for _, p := range req.Platforms {
-		if err := p.ValidateForPost(req.ArticleURL != "", req.MediaURLs); err != nil {
+		if err := p.ValidateForPost(req.ArticleURL != "", finalMediaURLs); err != nil {
 			return nil, err
 		}
 	}
-
-
 
 	status := domain.StatusDraft
 	if req.ScheduledAt != nil {
@@ -109,11 +141,8 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 		status = domain.StatusScheduled
 	}
 
-	mediaJSON, _ := json.Marshal(req.MediaURLs)
+	mediaJSON, _ := json.Marshal(finalMediaURLs)
 	platformJSON, _ := json.Marshal(req.Platforms)
-
-	postID := uuid.New()
-	now := time.Now()
 
 	query := `
 		INSERT INTO posts (
@@ -133,7 +162,7 @@ func CreatePost(ctx context.Context, authorID string, req CreatePostRequest) (*d
 		return nil, fmt.Errorf("create post: %w", err)
 	}
 
-		// Fetch the newly created post
+	// Fetch the newly created post
 	post, err := GetPost(ctx, postID.String(), workspaceID.String())
 	if err != nil {
 		return nil, err

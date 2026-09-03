@@ -1,4 +1,3 @@
-# schemas/media_assets.yaml
 table: media_assets
 columns:
   id:
@@ -7,7 +6,7 @@ columns:
     not_null: true
   post_id:
     type: uuid
-    not_null: true
+    not_null: false       # <-- CHANGED: Nullable until linked to a post
     references:
       table: posts
       column: id
@@ -20,16 +19,15 @@ columns:
     not_null: true
   processed_url:
     type: text
-    not_null: true
+    not_null: false       # <-- CHANGED: Nullable until FFmpeg finishes
   status:
     type: varchar(20)
     not_null: true
-    default: "'processing'" # 'processing', 'completed', 'failed'
+    default: "'processing'"
   created_at:
     type: timestamptz
     not_null: true
     default: now()
-
 indexes:
   - name: idx_media_assets_post_id
     columns: [post_id]
