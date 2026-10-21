@@ -72,3 +72,4 @@ func pollAndEnqueue(db *sql.DB) error {
     // ... (rest of existing enqueue logic remains the same)
 }
 
+ok do we walk 

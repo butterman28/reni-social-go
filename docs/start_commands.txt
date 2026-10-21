@@ -88,4 +88,3 @@ Both processes start, logs are color-coded per process, and Ctrl+C kills both.
 ```gitignore
 tmp/
 ```
-
